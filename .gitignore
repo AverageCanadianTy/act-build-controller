@@ -1,0 +1,11 @@
+node_modules
+dist
+out
+.DS_Store
+.eslintcache
+*.log*
+knowledge-base/
+
+# Runtime user state — generated locally, never committed
+config.json
+*.actproject
