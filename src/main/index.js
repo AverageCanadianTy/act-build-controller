@@ -117,7 +117,9 @@ function applyHunks(fileContent, hunks) {
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1100,
-    height: 720,
+    height: 800,
+    minWidth: 900,
+    minHeight: 780,
     backgroundColor: '#0f1115',
     show: false,
     autoHideMenuBar: true,
