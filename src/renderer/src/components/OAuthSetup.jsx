@@ -91,7 +91,7 @@ export default function OAuthSetup({ onSuccess, onClose }) {
               onClick={handleConnect}
               disabled={!credentials || connecting}
             >
-              {connecting ? 'Waiting for browser…' : 'Connect Account →'}
+              {connecting ? 'Signing in…' : 'Connect Account →'}
             </button>
           )}
         </div>

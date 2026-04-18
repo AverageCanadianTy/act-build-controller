@@ -1,18 +1,24 @@
 import { useState, useEffect } from 'react'
 
-export default function ProjectPicker({ onProjectLoaded }) {
+export default function ProjectPicker({ onProjectLoaded, activeUser, onBuildNewDirectory }) {
   const [recentProjects, setRecentProjects] = useState([])
   const [loading, setLoading] = useState(true)
+  const [collabToken, setCollabToken] = useState('')
+  const [collabError, setCollabError] = useState(null)
+  const [collabLoading, setCollabLoading] = useState(false)
 
   useEffect(() => {
     if (!window.api) return
     window.api.getRecentProjects().then(projects => {
-      setRecentProjects(projects)
+      const filtered = projects.filter(p =>
+        !p.userId || p.userId === activeUser?.id
+      )
+      setRecentProjects(filtered)
       setLoading(false)
     })
-  }, [])
+  }, [activeUser])
 
-  const handleNewProject = async () => {
+  const handleOpenExistingFolder = async () => {
     const rootPath = await window.api.selectFolder()
     if (!rootPath) return
     const folderName = rootPath.split('/').pop()
@@ -23,6 +29,9 @@ export default function ProjectPicker({ onProjectLoaded }) {
       rootPath,
       knowledgePath: '',
       knowledgeAbsolute: true,
+      ownerId: activeUser?.id || null,
+      allowedUsers: [],
+      collaborationTokens: [],
       targets: [{
         id: 'root',
         isRoot: true,
@@ -41,7 +50,11 @@ export default function ProjectPicker({ onProjectLoaded }) {
   const handleOpenProject = async () => {
     const result = await window.api.openProjectFile()
     if (!result) return
-    await window.api.addRecentProject({ filePath: result.filePath, projectName: result.data.name })
+    await window.api.addRecentProject({
+      filePath: result.filePath,
+      projectName: result.data.name,
+      userId: activeUser?.id
+    })
     onProjectLoaded(result.data, result.filePath)
   }
 
@@ -49,10 +62,30 @@ export default function ProjectPicker({ onProjectLoaded }) {
     const result = await window.api.loadProject(recent.filePath)
     if (!result) {
       const updated = await window.api.getRecentProjects()
-      setRecentProjects(updated)
+      setRecentProjects(updated.filter(p => !p.userId || p.userId === activeUser?.id))
       return
     }
     onProjectLoaded(result.data, result.filePath)
+  }
+
+  const handleRedeemToken = async () => {
+    const token = collabToken.trim()
+    if (!token) return
+    setCollabLoading(true)
+    setCollabError(null)
+    const result = await window.api.redeemCollabToken({
+      token,
+      userId: activeUser?.id
+    })
+    setCollabLoading(false)
+    if (!result.success) { setCollabError(result.error); return }
+    await window.api.addRecentProject({
+      filePath: result.filePath,
+      projectName: result.projectName,
+      userId: activeUser?.id
+    })
+    const loaded = await window.api.loadProject(result.filePath)
+    if (loaded) onProjectLoaded(loaded.data, loaded.filePath)
   }
 
   return (
@@ -64,13 +97,23 @@ export default function ProjectPicker({ onProjectLoaded }) {
           <p className="picker-subtitle">Matrix Orchestration System</p>
         </div>
 
+        {activeUser && (
+          <div className="picker-user-badge">
+            Signed in as <strong>{activeUser.displayName}</strong>
+          </div>
+        )}
+
         <div className="picker-actions">
-          <button className="picker-btn picker-btn-primary" onClick={handleNewProject}>
+          <button className="picker-btn picker-btn-primary" onClick={onBuildNewDirectory}>
             <span className="picker-btn-icon">+</span>
-            New Project
+            Build New Project Directory
+          </button>
+          <button className="picker-btn picker-btn-secondary" onClick={handleOpenExistingFolder}>
+            <span className="picker-btn-icon">📂</span>
+            Open Existing Project Folder
           </button>
           <button className="picker-btn picker-btn-secondary" onClick={handleOpenProject}>
-            <span className="picker-btn-icon">📂</span>
+            <span className="picker-btn-icon">📄</span>
             Open Project
           </button>
         </div>
@@ -88,6 +131,28 @@ export default function ProjectPicker({ onProjectLoaded }) {
             </div>
           </div>
         )}
+
+        <div className="picker-collab">
+          <div className="picker-recent-label">Join a Project</div>
+          <div className="picker-collab-row">
+            <input
+              className="login-input"
+              placeholder="Enter collaboration token..."
+              value={collabToken}
+              onChange={e => { setCollabToken(e.target.value); setCollabError(null) }}
+              onKeyDown={e => { if (e.key === 'Enter') handleRedeemToken() }}
+            />
+            <button
+              className="picker-btn picker-btn-secondary"
+              onClick={handleRedeemToken}
+              disabled={!collabToken.trim() || collabLoading}
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              {collabLoading ? '...' : 'Join →'}
+            </button>
+          </div>
+          {collabError && <div className="login-error" style={{ marginTop: 6 }}>{collabError}</div>}
+        </div>
       </div>
     </div>
   )

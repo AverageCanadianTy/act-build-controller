@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import FileTree from './components/FileTree'
+import LoginScreen from './components/LoginScreen'
 import ProjectPicker from './components/ProjectPicker'
 import SheetTracker from './components/SheetTracker'
 import OAuthSetup from './components/OAuthSetup'
-
+import DirectoryBuilder from './components/DirectoryBuilder'
+import CodePatcher from './components/CodePatcher'
 // ── Helpers ────────────────────────────────────────────────────────────────
 const toSafeName = (str) => str.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '')
 
@@ -40,7 +42,19 @@ const normalizeProject = (project) => ({
 })
 
 // ── Exclusion Modal ────────────────────────────────────────────────────────
-function ExclusionModal({ target, onToggle, onClose }) {
+function ExclusionModal({ target, onToggle, onSelectAll, onDeselectAll, onClose }) {
+  const getAllPaths = () => {
+    const paths = []
+    const walk = (nodes) => {
+      for (const node of nodes) {
+        paths.push(node.path)
+        if (node.children?.length) walk(node.children)
+      }
+    }
+    if (target.fileTree) walk(target.fileTree)
+    return paths
+  }
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
@@ -67,6 +81,8 @@ function ExclusionModal({ target, onToggle, onClose }) {
           />
         </div>
         <div className="modal-footer">
+          <button className="modal-bulk-btn" onClick={onDeselectAll}>☐ Deselect All</button>
+          <button className="modal-bulk-btn" onClick={() => onSelectAll(getAllPaths())}>☑ Select All</button>
           {target.ignorePatterns.length > 0 && (
             <button
               className="modal-save-ignore-btn"
@@ -132,15 +148,29 @@ function AddTargetModal({ onConfirm, onClose }) {
 
 // ── App ────────────────────────────────────────────────────────────────────
 export default function App() {
+  const [activeUser, setActiveUser] = useState(null)
   const [project, setProject] = useState(null)
   const [projectFilePath, setProjectFilePath] = useState(null)
   const [activeTab, setActiveTab] = useState('architect')
   const [logs, setLogs] = useState([])
   const [modalTargetId, setModalTargetId] = useState(null)
   const [showAddTarget, setShowAddTarget] = useState(false)
-  const [showOAuthSetup, setShowOAuthSetup] = useState(false)
+    const [showOAuthSetup, setShowOAuthSetup] = useState(false)
   const [oauthStatus, setOauthStatus] = useState(null)
   const terminalRef = useRef(null)
+  const [showDirectoryBuilder, setShowDirectoryBuilder] = useState(false)
+  const [bloatAdvisory, setBloatAdvisory] = useState([])
+  const [dismissedBloat, setDismissedBloat] = useState(new Set())
+  const buildQueueRef = useRef([])
+
+  // Auto-login check
+  useEffect(() => {
+    if (!window.api) return
+    window.api.getUsers().then(users => {
+      const auto = users.find(u => u.autoLogin)
+      if (auto) setActiveUser(auto)
+    })
+  }, [])  
 
   // Load OAuth status on mount
   useEffect(() => {
@@ -149,8 +179,18 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (!window.api) return
-    const unsub = window.api.onLog((data) => setLogs(prev => [...prev.slice(-200), data]))
+        if (!window.api) return
+    const unsub = window.api.onLog(async (data) => {
+      setLogs(prev => [...prev.slice(-200), data])
+      if (data === '✓ Done\n' && buildQueueRef.current.length > 0) {
+        const pending = buildQueueRef.current.shift()
+        const result = await window.api.scanBloat(pending)
+        setBloatAdvisory(prev => {
+          const filtered = prev.filter(b => b.targetId !== pending.targetId)
+          return result.triggered ? [...filtered, { targetId: pending.targetId, folderName: result.folderName, size: result.size }] : filtered
+        })
+      }
+    })
     return () => { if (unsub) unsub() }
   }, [])
 
@@ -162,9 +202,10 @@ export default function App() {
   useEffect(() => {
     const handler = (e) => {
       if (e.key === 'Escape') {
-        setModalTargetId(null)
+                setModalTargetId(null)
         setShowAddTarget(false)
         setShowOAuthSetup(false)
+        setShowDirectoryBuilder(false)
       }
     }
     window.addEventListener('keydown', handler)
@@ -179,16 +220,18 @@ export default function App() {
       projectName: project.name,
       data: project
     }).then(result => {
-      if (result.success && result.filePath && !projectFilePath) {
+      if (result.success && result.filePath) {
         setProjectFilePath(result.filePath)
         window.api.addRecentProject({ filePath: result.filePath, projectName: project.name })
       }
     })
   }, [project])
 
-  const handleProjectLoaded = (loadedProject, filePath) => {
+    const handleProjectLoaded = (loadedProject, filePath) => {
     setProject(normalizeProject(loadedProject))
     setProjectFilePath(filePath)
+    setBloatAdvisory([])
+    setDismissedBloat(new Set())
     if (filePath) window.api.addRecentProject({ filePath, projectName: loadedProject.name })
   }
 
@@ -320,7 +363,8 @@ export default function App() {
       await window.api.writeRepomixIgnore({ folderPath: target.folderPath, ignorePatterns: target.ignorePatterns })
     }
 
-    setLogs(prev => [...prev, `[${label}] Processing ${filename}...\n`])
+        setLogs(prev => [...prev, `[${label}] Processing ${filename}...\n`])
+    buildQueueRef.current.push({ targetId: target.id, outputFile, folderPath: target.folderPath, ignorePatterns: target.ignorePatterns || [] })
     window.api.runScript(`cd "${target.folderPath}" && repomix --output "${outputFile}"`)
   }
 
@@ -337,14 +381,29 @@ export default function App() {
   const modalTarget = modalTargetId ? project?.targets.find(t => t.id === modalTargetId) : null
   const tracker = project?.sheetTracker || { enabled: false, groups: [] }
 
-  if (!project) return <ProjectPicker onProjectLoaded={handleProjectLoaded} />
-
+if (!project) return (
+    <>
+      <ProjectPicker
+        onProjectLoaded={handleProjectLoaded}
+        onBuildNewDirectory={() => setShowDirectoryBuilder(true)}
+      />
+      {showDirectoryBuilder && (
+        <DirectoryBuilder
+          onComplete={(projectData, filePath) => { setShowDirectoryBuilder(false); handleProjectLoaded(projectData, filePath) }}
+          onClose={() => setShowDirectoryBuilder(false)}
+        />
+      )}
+    </>
+  )
+  
   return (
     <main className="app-layout">
       {modalTarget && (
         <ExclusionModal
           target={modalTarget}
           onToggle={(path) => toggleIgnore(modalTargetId, path)}
+          onSelectAll={(paths) => updateTarget(modalTargetId, prev => ({ ...prev, ignorePatterns: paths }))}
+          onDeselectAll={() => updateTarget(modalTargetId, prev => ({ ...prev, ignorePatterns: [] }))}
           onClose={() => setModalTargetId(null)}
         />
       )}
@@ -378,6 +437,9 @@ export default function App() {
           </button>
           <button className={activeTab === 'commander' ? 'active' : ''} onClick={() => setActiveTab('commander')}>
             Command Center
+          </button>
+          <button className={activeTab === 'patcher' ? 'active' : ''} onClick={() => setActiveTab('patcher')}>
+            Code Patcher
           </button>
         </div>
         <button className="sidebar-back-btn" onClick={() => { setProject(null); setProjectFilePath(null) }}>
@@ -487,23 +549,43 @@ export default function App() {
                   )}
                 </div>
               )}
+              {(() => {
+                const advisory = bloatAdvisory.find(b => b.targetId === target.id)
+                if (!advisory || dismissedBloat.has(target.id)) return null
+                return (
+                  <div className="bloat-banner">
+                    <div className="bloat-banner-text">⚠ Matrix output is large ({(advisory.size / (1024 * 1024)).toFixed(1)}MB). {advisory.folderName}/ is not excluded from this target — this is likely causing bloat.</div>
+                    <div className="bloat-banner-actions">
+                      <button className="bloat-open-btn" onClick={() => setModalTargetId(target.id)}>Open Ignore Matrix →</button>
+                      <button className="bloat-dismiss-btn" onClick={() => setDismissedBloat(prev => new Set([...prev, target.id]))}>Dismiss</button>
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
+            
           ))}
 
+            
+
             <button className="add-domain-btn" onClick={() => setShowAddTarget(true)}>
-              + Add Scan Target
+                            + Add Scan Target
             </button>
 
-            {/* ── Sheet Tracker ─────────────────────────────────────────── */}
+            {/* ── Data Sources ──────────────────────────────────────────── */}
             <div className="section-divider" />
-            <SheetTracker
-              project={project}
-              oauthStatus={oauthStatus}
-              onUpdate={updateProject}
-              onOAuthRequest={() => setShowOAuthSetup(true)}
-            />
+            <div className="data-sources-section">
+              <div className="data-sources-section-label">Data Sources</div>
+              <SheetTracker
+                project={project}
+                oauthStatus={oauthStatus}
+                onUpdate={updateProject}
+                onOAuthRequest={() => setShowOAuthSetup(true)}
+              />
+            </div>
           </div>
         )}
+
 
         {/* ── COMMANDER ──────────────────────────────────────────────────── */}
         {activeTab === 'commander' && (
@@ -545,9 +627,9 @@ export default function App() {
               })}
 
               {/* Sheet groups */}
-              {tracker.enabled && tracker.groups.length > 0 && (
+                            {tracker.enabled && tracker.groups.length > 0 && (
                 <>
-                  <div className="commander-section-label">Sheet Data</div>
+                  <div className="commander-section-label">Data Sources</div>
                   {tracker.groups.map((group) => {
                     const ready = !!(group.sheetIds.length > 0 && project.knowledgePath && oauthStatus?.hasToken)
                     return (
@@ -591,6 +673,9 @@ export default function App() {
               </div>
             </div>
           </div>
+        )}
+        {activeTab === 'patcher' && (
+          <CodePatcher project={project} />
         )}
       </section>
     </main>

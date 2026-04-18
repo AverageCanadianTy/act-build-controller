@@ -29,16 +29,33 @@ const api = {
   // Build
   runScript: (command) => ipcRenderer.send('execute-command', command),
 
+  // Directory Builder
+  createProjectDirectory: (args) => ipcRenderer.invoke('create-project-directory', args),
+  scanBloat: (args) => ipcRenderer.invoke('scan-bloat', args),
+
   // OAuth
   getOAuthStatus: () => ipcRenderer.invoke('get-oauth-status'),
   parseClientSecretFile: (filePath) => ipcRenderer.invoke('parse-client-secret-file', filePath),
   startOAuthFlow: (args) => ipcRenderer.invoke('start-oauth-flow', args),
+  disconnectGoogle: (args) => ipcRenderer.invoke('disconnect-google', args),
+
+  // Users
+  getUsers: () => ipcRenderer.invoke('get-users'),
+  registerUser: (args) => ipcRenderer.invoke('register-user', args),
+  loginUser: (args) => ipcRenderer.invoke('login-user', args),
+  updateAutoLogin: (args) => ipcRenderer.invoke('update-auto-login', args),
+  generateCollabToken: (args) => ipcRenderer.invoke('generate-collab-token', args),
+  revokeCollaborator: (args) => ipcRenderer.invoke('revoke-collaborator', args),
+  redeemCollabToken: (args) => ipcRenderer.invoke('redeem-collab-token', args),
 
   // Sheet Tracker
-  validateSheetId: (sheetId) => ipcRenderer.invoke('validate-sheet-id', sheetId),
-  fetchSheetData: (args) => ipcRenderer.invoke('fetch-sheet-data', args),
+  validateSheetId: (sheetId) => ipcRenderer.invoke('validate-sheet-id', sheetId),  fetchSheetData: (args) => ipcRenderer.invoke('fetch-sheet-data', args),
   generateSheetScript: (args) => ipcRenderer.invoke('generate-sheet-script', args),
   importSheetScript: (filePath) => ipcRenderer.invoke('import-sheet-script', filePath),
+
+// Code Patcher
+readFileForPatch: (filePath) => ipcRenderer.invoke('read-file-for-patch', filePath),
+applyPatches: (args) => ipcRenderer.invoke('apply-patches', args),
 
   // Terminal log listener
   onLog: (callback) => {

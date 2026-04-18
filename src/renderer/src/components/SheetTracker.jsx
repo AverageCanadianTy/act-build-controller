@@ -172,18 +172,18 @@ export default function SheetTracker({ project, oauthStatus, onUpdate, onOAuthRe
       ...g,
       sheetIds: [...g.sheetIds, ...allIds.filter(s => !g.sheetIds.find(e => e.id === s.id))]
     }))
-  }
+    }
 
   return (
-    <div className="sheet-tracker-panel">
-      <div className="sheet-tracker-toggle-row">
+    <div className="data-sources-panel">
+      <div className="data-sources-toggle-row">
         <label className="absolute-toggle">
           <input
             type="checkbox"
             checked={tracker.enabled}
             onChange={(e) => handleToggle(e.target.checked)}
           />
-          <span>Sheet Tracker</span>
+          <span>Data Sources</span>
         </label>
         {tracker.enabled && oauthStatus?.hasToken && (
           <span className="oauth-status-badge">🔑 Google Connected</span>
