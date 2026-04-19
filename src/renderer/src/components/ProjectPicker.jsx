@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-export default function ProjectPicker({ onProjectLoaded, activeUser, onBuildNewDirectory }) {
+export default function ProjectPicker({ onProjectLoaded, activeUser, onBuildNewDirectory, onLogout }) {
   const [recentProjects, setRecentProjects] = useState([])
   const [loading, setLoading] = useState(true)
   const [collabToken, setCollabToken] = useState('')
@@ -97,9 +97,10 @@ export default function ProjectPicker({ onProjectLoaded, activeUser, onBuildNewD
           <p className="picker-subtitle">Matrix Orchestration System</p>
         </div>
 
-        {activeUser && (
+                {activeUser && (
           <div className="picker-user-badge">
             Signed in as <strong>{activeUser.displayName}</strong>
+            <button className="picker-signout-btn" onClick={onLogout}>Sign Out</button>
           </div>
         )}
 

@@ -6,6 +6,9 @@ import SheetTracker from './components/SheetTracker'
 import OAuthSetup from './components/OAuthSetup'
 import DirectoryBuilder from './components/DirectoryBuilder'
 import CodePatcher from './components/CodePatcher'
+import CollabManager from './components/CollabManager'
+import DevKit from './components/DevKit'
+import DatabaseConfig from './components/DatabaseConfig'
 // ── Helpers ────────────────────────────────────────────────────────────────
 const toSafeName = (str) => str.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '')
 
@@ -38,7 +41,11 @@ const matchPatternsToTree = (tree, patterns, rootPath) => {
 // Ensures loaded projects have all expected fields (backward compat)
 const normalizeProject = (project) => ({
   ...project,
-  sheetTracker: project.sheetTracker || { enabled: false, groups: [] }
+  sheetTracker: project.sheetTracker || { enabled: false, groups: [] },
+  devKit: project.devKit || { selections: [], installed: [], pending: [], activeDependencies: [] },
+  dbTargets: project.dbTargets || [],
+  matrixVersion: project.matrixVersion ?? 0,
+  databaseType: project.databaseType ?? null
 })
 
 // ── Exclusion Modal ────────────────────────────────────────────────────────
@@ -157,8 +164,9 @@ export default function App() {
   const [showAddTarget, setShowAddTarget] = useState(false)
     const [showOAuthSetup, setShowOAuthSetup] = useState(false)
   const [oauthStatus, setOauthStatus] = useState(null)
-  const terminalRef = useRef(null)
+    const terminalRef = useRef(null)
   const [showDirectoryBuilder, setShowDirectoryBuilder] = useState(false)
+  const [showCollabManager, setShowCollabManager] = useState(false)
   const [bloatAdvisory, setBloatAdvisory] = useState([])
   const [dismissedBloat, setDismissedBloat] = useState(new Set())
   const buildQueueRef = useRef([])
@@ -204,8 +212,9 @@ export default function App() {
       if (e.key === 'Escape') {
                 setModalTargetId(null)
         setShowAddTarget(false)
-        setShowOAuthSetup(false)
+                setShowOAuthSetup(false)
         setShowDirectoryBuilder(false)
+        setShowCollabManager(false)
       }
     }
     window.addEventListener('keydown', handler)
@@ -378,14 +387,25 @@ export default function App() {
   const getOutputPath = (target) =>
     project.knowledgeAbsolute ? project.knowledgePath : (target.outputPath || project.knowledgePath)
 
-  const modalTarget = modalTargetId ? project?.targets.find(t => t.id === modalTargetId) : null
+    const modalTarget = modalTargetId ? project?.targets.find(t => t.id === modalTargetId) : null
   const tracker = project?.sheetTracker || { enabled: false, groups: [] }
+
+  const handleLogout = async () => {
+    if (activeUser) await window.api.updateAutoLogin({ userId: activeUser.id, autoLogin: false })
+    setActiveUser(null)
+    setProject(null)
+    setProjectFilePath(null)
+  }
+
+  if (!activeUser) return <LoginScreen onLogin={setActiveUser} />
 
 if (!project) return (
     <>
       <ProjectPicker
         onProjectLoaded={handleProjectLoaded}
         onBuildNewDirectory={() => setShowDirectoryBuilder(true)}
+        activeUser={activeUser}
+        onLogout={handleLogout}
       />
       {showDirectoryBuilder && (
         <DirectoryBuilder
@@ -425,23 +445,40 @@ if (!project) return (
               sheetTracker: { ...prev.sheetTracker, enabled: true }
             }))
           }}
-          onClose={() => setShowOAuthSetup(false)}
+                    onClose={() => setShowOAuthSetup(false)}
+        />
+      )}
+
+      {showCollabManager && (
+        <CollabManager
+          projectFilePath={projectFilePath}
+          activeUser={activeUser}
+          onClose={() => setShowCollabManager(false)}
         />
       )}
 
       <nav className="sidebar">
         <div className="sidebar-project-name">{project.name}</div>
-        <div className="nav-group">
+                <div className="nav-group">
           <button className={activeTab === 'architect' ? 'active' : ''} onClick={() => setActiveTab('architect')}>
             Matrix Architect
           </button>
-          <button className={activeTab === 'commander' ? 'active' : ''} onClick={() => setActiveTab('commander')}>
-            Command Center
+          <button className={activeTab === 'database' ? 'active' : ''} onClick={() => setActiveTab('database')}>
+            Database Config
+          </button>
+          <button className={activeTab === 'devkit' ? 'active' : ''} onClick={() => setActiveTab('devkit')}>
+            Dev Kit
           </button>
           <button className={activeTab === 'patcher' ? 'active' : ''} onClick={() => setActiveTab('patcher')}>
             Code Patcher
           </button>
+          <button className={activeTab === 'commander' ? 'active' : ''} onClick={() => setActiveTab('commander')}>
+            Command Center
+          </button>
         </div>
+        <button className="sidebar-share-btn" onClick={() => setShowCollabManager(true)}>
+          ⬡ Share Project
+        </button>
         <button className="sidebar-back-btn" onClick={() => { setProject(null); setProjectFilePath(null) }}>
           ← Projects
         </button>
@@ -568,21 +605,9 @@ if (!project) return (
 
             
 
-            <button className="add-domain-btn" onClick={() => setShowAddTarget(true)}>
+                        <button className="add-domain-btn" onClick={() => setShowAddTarget(true)}>
                             + Add Scan Target
             </button>
-
-            {/* ── Data Sources ──────────────────────────────────────────── */}
-            <div className="section-divider" />
-            <div className="data-sources-section">
-              <div className="data-sources-section-label">Data Sources</div>
-              <SheetTracker
-                project={project}
-                oauthStatus={oauthStatus}
-                onUpdate={updateProject}
-                onOAuthRequest={() => setShowOAuthSetup(true)}
-              />
-            </div>
           </div>
         )}
 
@@ -672,10 +697,21 @@ if (!project) return (
                 }
               </div>
             </div>
-          </div>
+                    </div>
         )}
         {activeTab === 'patcher' && (
           <CodePatcher project={project} />
+        )}
+                {activeTab === 'devkit' && project && (
+          <DevKit project={project} onUpdate={updateProject} />
+        )}
+        {activeTab === 'database' && project && (
+          <DatabaseConfig
+            project={project}
+            oauthStatus={oauthStatus}
+            onUpdate={updateProject}
+            onOAuthRequest={() => setShowOAuthSetup(true)}
+          />
         )}
       </section>
     </main>

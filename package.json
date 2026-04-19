@@ -1,6 +1,6 @@
 {
   "name": "act-build-controller",
-  "version": "1.0.1",
+  "version": "2.1.0",
   "description": "ACT Build Controller — Matrix Orchestration System",
   "main": "./out/main/index.js",
   "author": "Average Canadian Ty",

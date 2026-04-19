@@ -24,14 +24,15 @@ const api = {
 
   // Repomixignore
   writeRepomixIgnore: (args) => ipcRenderer.invoke('write-repomixignore', args),
-  parseRepomixIgnore: (filePath) => ipcRenderer.invoke('parse-repomixignore', filePath),
+    parseRepomixIgnore: (filePath) => ipcRenderer.invoke('parse-repomixignore', filePath),
 
   // Build
-  runScript: (command) => ipcRenderer.send('execute-command', command),
+  runScript: (args) => ipcRenderer.send('execute-command', args),
 
   // Directory Builder
-  createProjectDirectory: (args) => ipcRenderer.invoke('create-project-directory', args),
+    createProjectDirectory: (args) => ipcRenderer.invoke('create-project-directory', args),
   scanBloat: (args) => ipcRenderer.invoke('scan-bloat', args),
+  checkRuntimeDeps: () => ipcRenderer.invoke('check-runtime-deps'),
 
   // OAuth
   getOAuthStatus: () => ipcRenderer.invoke('get-oauth-status'),

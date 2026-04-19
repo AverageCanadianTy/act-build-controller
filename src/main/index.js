@@ -42,6 +42,39 @@ function toSheetSubfolder(label) {
   return `${label.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}-sheet-matrices`
 }
 
+// ── Schema Migration ─────────────────────────────────────────────────────────
+function migrateProjectSchema(data, filePath) {
+  let changed = false
+  if (!data.devKit) {
+    data.devKit = { selections: [], installed: [], pending: [], activeDependencies: [] }
+    changed = true
+  }
+  if (data.matrixVersion === undefined) {
+    data.matrixVersion = 0
+    data.matrixHistory = []
+    changed = true
+  }
+  if (!data.dbTargets) {
+    data.dbTargets = []
+    changed = true
+  }
+  if (data.databaseType === undefined) {
+    data.databaseType = null
+    changed = true
+  }
+  if (data.sheetTracker?.groups?.length > 0 && data.dbTargets.length === 0) {
+    data.dbTargets = data.sheetTracker.groups.map(g => ({
+      id: `db_${(g.name || '').toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') || 'grp'}`,
+      type: 'SHEETS', label: g.name || 'Sheets Group', outputPath: null, config: g
+    }))
+    changed = true
+  }
+  if (changed && filePath) {
+    try { fs.writeFileSync(filePath, JSON.stringify(data, null, 2)) } catch {}
+  }
+  return data
+}
+
 // ── Code Patcher — hunk apply engine ─────────────────────────────────────────
 function applyHunks(fileContent, hunks) {
   let text = fileContent.replace(/\r\n/g, '\n')
@@ -130,11 +163,12 @@ function createWindow() {
       contextIsolation: true
     }
   })
-  mainWindow.on('ready-to-show', () => {
+    mainWindow.on('ready-to-show', () => {
   mainWindow.show()
   mainWindow.webContents.on('console-message', (event) => {
     console.log(`[RENDERER] ${event.message} (${event.sourceId}:${event.lineNumber})`)
   })
+  mainWindow.webContents.openDevTools()
 })
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
@@ -146,9 +180,15 @@ function createWindow() {
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
+    app.commandLine.appendSwitch('disable-dev-shm-usage')
 
 function annotateMatrix(filePath) {
- const content = fs.readFileSync(filePath, 'utf-8')
+ let content = fs.readFileSync(filePath, 'utf-8')
+ if (!content.startsWith('<!-- ACT Matrix')) {
+   const target = filePath.split(/[/\\]/).pop().replace(/\.xml$/, '')
+   const generated = new Date().toISOString()
+   content = `<!-- ACT Matrix | version=PENDING | generated=${generated} | target=${target} -->\n` + content
+ }
  const annotated = content.replace(
     /(<file path="[^"]+">)([\s\S]*?)(<\/file>)/g,
     (_, open, body, close) => {
@@ -299,13 +339,15 @@ ipcMain.handle('apply-patches', async (_, { patches, rootPath }) => {
       const filePath = join(knowledgePath, `${safe}_matrices.actproject`)
       fs.writeFileSync(filePath, JSON.stringify(data, null, 2))
       return { success: true, filePath }
-    } catch (error) { return { success: false, error: error.message } }
+        } catch (error) { return { success: false, error: error.message } }
   })
 
   ipcMain.handle('load-project', async (_, filePath) => {
     try {
-      const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-      return data.type === 'ACT_PROJECT' ? { data, filePath } : null
+      const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+      if (raw.type !== 'ACT_PROJECT') return null
+      const data = migrateProjectSchema(raw, filePath)
+      return { data, filePath }
     } catch { return null }
   })
 
@@ -314,10 +356,12 @@ ipcMain.handle('apply-patches', async (_, { patches, rootPath }) => {
       properties: ['openFile'],
       filters: [{ name: 'ACT Project', extensions: ['actproject'] }]
     })
-    if (canceled) return null
+        if (canceled) return null
     try {
-      const data = JSON.parse(fs.readFileSync(filePaths[0], 'utf-8'))
-      return data.type === 'ACT_PROJECT' ? { data, filePath: filePaths[0] } : null
+      const raw = JSON.parse(fs.readFileSync(filePaths[0], 'utf-8'))
+      if (raw.type !== 'ACT_PROJECT') return null
+      const data = migrateProjectSchema(raw, filePaths[0])
+      return { data, filePath: filePaths[0] }
     } catch { return null }
   })
 
@@ -378,11 +422,13 @@ ipcMain.handle('apply-patches', async (_, { patches, rootPath }) => {
     try {
       return fs.readFileSync(filePath, 'utf-8').split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'))
     } catch { return [] }
-  })
+    })
 
   // ── Command execution ─────────────────────────────────────────────────────
-  ipcMain.on('execute-command', (event, command) => {
-  const proc = exec(command, { env: { ...process.env } })
+  ipcMain.on('execute-command', (event, payload) => {
+  const command = typeof payload === 'string' ? payload : payload.command
+  const cwd = typeof payload === 'string' ? undefined : payload.cwd
+  const proc = exec(command, { env: { ...process.env }, ...(cwd ? { cwd } : {}) })
   proc.stderr.on('data', (data) => event.reply('terminal-data', `[stderr] ${data.toString()}`))
   proc.on('close', (code) => {
     if (code === 0) {
@@ -399,8 +445,25 @@ ipcMain.handle('apply-patches', async (_, { patches, rootPath }) => {
     } else {
       event.reply('terminal-data', `\n[✗ Failed with exit code ${code}]\n`)
     }
-  })
+    })
 })
+
+  // ── Runtime dependency check ──────────────────────────────────────────────
+  ipcMain.handle('check-runtime-deps', async () => {
+    const check = (cmd) => new Promise((resolve) => {
+      exec(cmd, (err, stdout) => {
+        const version = stdout.trim().split('\n')[0] || ''
+        resolve({ available: !err, version: err ? null : version })
+      })
+    })
+    const [node, python3, pip3, postgres] = await Promise.all([
+      check('node --version'),
+      check('python3 --version'),
+      check('pip3 --version'),
+      check('pg_isready --version')
+    ])
+    return { node, python3, pip3, postgres }
+  })
 
   // ── OAuth ─────────────────────────────────────────────────────────────────
   ipcMain.handle('get-oauth-status', async () => {
@@ -738,7 +801,7 @@ if __name__ == "__main__":
       const readme = `# ${projectName}\n\nCreated with ACT Build Controller — ${date}\n\n## Project Structure\n\n${folderName}/          ← source code root\n${knowledgeName}/ ← ACT knowledge base (not committed)\n`
       fs.writeFileSync(join(projectRoot, 'docs', 'README.md'), readme)
 
-      const safe = projectName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+            const safe = projectName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
       const projectFilePath = join(knowledgeRoot, `${safe}_matrices.actproject`)
 
       const projectData = {
@@ -747,6 +810,8 @@ if __name__ == "__main__":
         rootPath: projectRoot,
         knowledgePath: knowledgeRoot,
         knowledgeAbsolute: true,
+        matrixVersion: 0,
+        matrixHistory: [],
         targets: targets.map(t => ({
           id: t.id,
           isRoot: t.isRoot,
@@ -758,6 +823,9 @@ if __name__ == "__main__":
           repomixIgnoreFile: join(t.folderPath, '.repomixignore'),
           repomixIgnorePatterns: t.ignorePatterns
         })),
+        dbTargets: [],
+        devKit: { selections: [], installed: [], pending: [], activeDependencies: [] },
+        databaseType: null,
         sheetTracker: { enabled: false, groups: [] }
       }
 

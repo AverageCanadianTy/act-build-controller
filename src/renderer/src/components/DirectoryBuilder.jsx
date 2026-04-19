@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const IGNORE = {
   root: ['node_modules', 'dist', 'out', 'build', '.venv', '__pycache__', '*.pyc', '.pytest_cache', '*.egg-info', '*.log', '.DS_Store', 'modules'],
@@ -11,10 +11,40 @@ const TYPE_CONFIG = {
   webapp:    { label: 'Web App',           core: ['frontend', 'docs'], optional: ['modules'], classes: ['FRONTEND'] },
   python:    { label: 'Python Backend',    core: ['backend', 'docs'],  optional: ['modules'], classes: ['BACKEND'] },
   fullstack: { label: 'Full-Stack',        core: ['frontend', 'backend', 'docs'], optional: ['modules'], classes: ['FRONTEND', 'BACKEND'] },
-  blank:     { label: 'Blank / Custom',    core: ['docs'], optional: [], classes: [] }
+    blank:     { label: 'Blank / Custom',    core: ['docs'], optional: [], classes: [] }
 }
 
-const ALL_STEPS = ['Name', 'Type', 'Folders', 'Targets', 'Destination']
+const DB_OPTIONS = [
+  { id: null,       label: 'None — no database needed' },
+  { id: 'sheets',   label: 'Google Sheets' },
+  { id: 'sqlite',   label: 'SQLite (local, zero-config)' },
+  { id: 'postgres', label: 'PostgreSQL (remote server required)' },
+]
+
+const DEV_KIT_CATALOG = [
+  { category: 'Frontend', items: [
+    { id: 'vite',     label: 'Vite',     cmd: 'npm install -D vite', type: 'npm' },
+    { id: 'react',    label: 'React',    cmd: 'npm install react react-dom', type: 'npm' },
+    { id: 'electron', label: 'Electron', cmd: 'npm install -D electron electron-vite', type: 'npm' },
+  ]},
+  { category: 'Backend', items: [
+    { id: 'venv',    label: 'Python venv', cmd: 'python3 -m venv .venv', type: 'shell' },
+    { id: 'flask',   label: 'Flask',       cmd: 'pip3 install flask', type: 'pip' },
+    { id: 'fastapi', label: 'FastAPI',     cmd: 'pip3 install fastapi uvicorn', type: 'pip' },
+  ]},
+  { category: 'Database', items: [
+    { id: 'google-auth',    label: 'Google Auth (Sheets)',    cmd: 'pip3 install google-auth-oauthlib google-api-python-client', type: 'pip',   dbTypes: ['sheets'] },
+    { id: 'better-sqlite3', label: 'SQLite (better-sqlite3)', cmd: 'npm install better-sqlite3',    type: 'npm',   dbTypes: ['sqlite'] },
+    { id: 'pg',             label: 'PostgreSQL (pg)',         cmd: 'npm install pg',                 type: 'npm',   dbTypes: ['postgres'] },
+    { id: 'sqlalchemy',     label: 'SQLAlchemy',              cmd: 'pip3 install sqlalchemy',        type: 'pip',   dbTypes: ['sqlite', 'postgres'] },
+    { id: 'psycopg2',       label: 'psycopg2',                cmd: 'pip3 install psycopg2-binary',   type: 'pip',   dbTypes: ['postgres'] },
+  ]},
+  { category: 'Security', items: [
+    { id: 'bcrypt', label: 'bcrypt', cmd: 'npm install bcryptjs', type: 'npm' },
+  ]},
+]
+
+const ALL_STEPS = ['Name', 'Type', 'Database', 'Folders', 'Dev Kit', 'Targets', 'Destination']
 
 const slugify = (str) => str.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
 
@@ -43,12 +73,38 @@ export default function DirectoryBuilder({ onComplete, onClose }) {
   const [customInput, setCustomInput] = useState('')
   const [destination, setDestination] = useState('')
   const [destError, setDestError] = useState(null)
-  const [creating, setCreating] = useState(false)
+    const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState(null)
+  const [dbType, setDbType] = useState(null)
+  const [devKitSelections, setDevKitSelections] = useState([])
+  const [runtimeDeps, setRuntimeDeps] = useState(null)
+  const [preflightDone, setPreflightDone] = useState(false)
+
+  useEffect(() => {
+    window.api.checkRuntimeDeps().then(deps => {
+      setRuntimeDeps(deps)
+      setPreflightDone(true)
+    }).catch(() => setPreflightDone(true))
+  }, [])
+
+  useEffect(() => {
+    if (!dbType) return
+    const dbPkgIds = DEV_KIT_CATALOG
+      .find(c => c.category === 'Database')?.items
+      .filter(item => item.dbTypes?.includes(dbType))
+      .map(item => item.id) || []
+    setDevKitSelections(prev => [...new Set([...prev, ...dbPkgIds])])
+  }, [dbType])
 
   const folderName = slugify(projectName)
   const knowledgeName = `${folderName}-knowledge`
   const isBlank = projectType === 'blank'
+
+  const visibleSteps = ALL_STEPS.filter((_, i) => {
+    const s = i + 1
+    if (isBlank) return s === 1 || s === 2 || s === 7
+    return true
+  })
 
   const validateName = () => {
     if (!projectName.trim()) { setNameError('Project name is required'); return false }
@@ -65,17 +121,19 @@ export default function DirectoryBuilder({ onComplete, onClose }) {
   const handleCreate = async () => {
     if (!destination) { setDestError('Please select a destination folder'); return }
     setCreating(true)
-    setCreateError(null)
+        setCreateError(null)
     try {
       const result = await window.api.createProjectDirectory({
         projectName: projectName.trim(),
         projectType,
         destination,
         folders: isBlank ? ['docs'] : activeFolders,
-        targets: isBlank ? [] : getTargets()
+        targets: isBlank ? [] : getTargets(),
+        dbType: dbType || null,
+        devKitSelections
       })
       if (!result.success) { setCreateError(result.error || 'Creation failed'); setCreating(false); return }
-      onComplete(result.projectData, result.projectFilePath)
+            onComplete(result.projectData, result.projectFilePath)
     } catch (e) { setCreateError(e.message); setCreating(false) }
   }
 
@@ -83,16 +141,18 @@ export default function DirectoryBuilder({ onComplete, onClose }) {
     if (step === 1) { if (!validateName()) return; setStep(2) }
     else if (step === 2) {
       if (!projectType) return
-      if (isBlank) { setStep(5) }
+      if (isBlank) { setStep(7) }
       else { setActiveFolders([...TYPE_CONFIG[projectType].core, ...TYPE_CONFIG[projectType].optional]); setStep(3) }
     }
     else if (step === 3) setStep(4)
     else if (step === 4) setStep(5)
-    else if (step === 5) handleCreate()
+    else if (step === 5) setStep(6)
+    else if (step === 6) setStep(7)
+    else if (step === 7) handleCreate()
   }
 
   const goBack = () => {
-    if (step === 5 && isBlank) setStep(2)
+    if (step === 7 && isBlank) setStep(2)
     else if (step > 1) setStep(step - 1)
   }
 
@@ -101,19 +161,20 @@ export default function DirectoryBuilder({ onComplete, onClose }) {
     if (!val || activeFolders.includes(val)) return
     setActiveFolders(prev => [...prev, val])
     setCustomInput('')
-  }
+    }
 
-  const isLastStep = step === 5
+  const isLastStep = step === 7
   const isNextDisabled = (step === 1 && !projectName.trim()) || (step === 2 && !projectType) || (isLastStep && (!destination || creating))
 
   const renderStepIndicator = () => (
     <div className="wizard-steps">
-      {ALL_STEPS.map((label, i) => {
-        const s = i + 1
-        const skipped = isBlank && (s === 3 || s === 4)
+      {visibleSteps.map((label, i) => {
+        const globalStep = ALL_STEPS.indexOf(label) + 1
+        const isDone = step > globalStep
+        const isActive = step === globalStep
         return (
-          <div key={s} className={`wizard-step-item${step === s ? ' active' : ''}${step > s && !skipped ? ' done' : ''}${skipped ? ' skipped' : ''}`}>
-            <span className="wizard-step-num">{s}</span>
+          <div key={globalStep} className={`wizard-step-item${isActive ? ' active' : ''}${isDone ? ' done' : ''}`}>
+            <span className="wizard-step-num">{i + 1}</span>
             <span className="wizard-step-label">{label}</span>
           </div>
         )
@@ -147,9 +208,28 @@ export default function DirectoryBuilder({ onComplete, onClose }) {
             </label>
           ))}
         </div>
-      </div>
+            </div>
     )
     if (step === 3) return (
+      <div className="wizard-body">
+        <div className="wizard-field-label">Does your project need a database?</div>
+        <div className="wizard-type-list">
+          {DB_OPTIONS.map(opt => (
+            <label key={String(opt.id)} className={`wizard-type-option${dbType === opt.id ? ' selected' : ''}`}>
+              <input type="radio" name="dbType" value={String(opt.id)} checked={dbType === opt.id} onChange={() => setDbType(opt.id)} />
+              {opt.label}
+            </label>
+          ))}
+        </div>
+        {dbType === 'postgres' && (
+          <div className="wizard-warn">⚠ PostgreSQL requires a running server on this machine. Packages will be pre-selected in Dev Kit.</div>
+        )}
+        {dbType === 'sheets' && (
+          <div className="wizard-hint">Google OAuth is configured after project creation via the Database Configuration tab.</div>
+        )}
+      </div>
+    )
+    if (step === 4) return (
       <div className="wizard-body">
         <div className="wizard-field-label">Project Folders</div>
         <div className="wizard-hint-sm">These folders will be created in your project.</div>
@@ -170,9 +250,47 @@ export default function DirectoryBuilder({ onComplete, onClose }) {
             onKeyDown={e => { if (e.key === 'Enter') addCustomFolder() }} />
           <button className="wizard-add-folder-btn" onClick={addCustomFolder} disabled={!customInput.trim()}>+ Add Folder</button>
         </div>
+            </div>
+    )
+    if (step === 5) return (
+      <div className="wizard-body">
+        <div className="wizard-field-label">Dev Kit — Select packages to install</div>
+        <div className="wizard-hint-sm">Pre-checked items are recommended for your stack. You can install or remove packages later from the Dev Kit tab.</div>
+        {!preflightDone && <div className="wizard-hint-sm">Checking runtime environment...</div>}
+        {runtimeDeps && (
+          <div className="wizard-runtime-row">
+            {['node', 'python3', 'pip3'].map(tool => (
+              <span key={tool} className={`wizard-runtime-badge${runtimeDeps[tool]?.available ? ' detected' : ' missing'}`}>
+                {runtimeDeps[tool]?.available ? '✓' : '⚠'} {tool}{runtimeDeps[tool]?.version ? ` ${runtimeDeps[tool].version}` : ' — not found'}
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="wizard-devkit-tree">
+          {DEV_KIT_CATALOG.map(cat => (
+            <div key={cat.category} className="wizard-devkit-category">
+              <div className="wizard-devkit-cat-header">
+                <span className="wizard-devkit-cat-label">{cat.category}</span>
+                <span className="wizard-devkit-cat-count">{cat.items.filter(it => devKitSelections.includes(it.id)).length} selected</span>
+              </div>
+              <div className="wizard-devkit-items">
+                {cat.items.map(item => (
+                  <label key={item.id} className="wizard-devkit-item">
+                    <input type="checkbox" checked={devKitSelections.includes(item.id)}
+                      onChange={e => setDevKitSelections(prev =>
+                        e.target.checked ? [...prev, item.id] : prev.filter(x => x !== item.id)
+                      )} />
+                    <span className="wizard-devkit-item-label">{item.label}</span>
+                    <code className="wizard-devkit-item-cmd">{item.type}</code>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     )
-    if (step === 4) {
+    if (step === 6) {
       const targets = getTargets()
       return (
         <div className="wizard-body">
@@ -190,8 +308,9 @@ export default function DirectoryBuilder({ onComplete, onClose }) {
             ))}
           </div>
         </div>
-      )
+            )
     }
+    if (step !== 7) return null
     const projectPath = destination ? pathJoin(destination, folderName) : null
     const kbPath = destination ? pathJoin(destination, knowledgeName) : null
     return (

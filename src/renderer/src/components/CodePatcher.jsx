@@ -127,9 +127,20 @@ const handleLoad = async (slotId) => {
       return
     }
 
-    const filePath = extractFilePath(text)
+        const filePath = extractFilePath(text)
     if (!filePath) {
       flashRed(slotId)
+      return
+    }
+
+    const isNewFile = /^--- \/dev\/null/m.test(text)
+    if (isNewFile) {
+      const hunks = parseHunks(text)
+      setSlots(prev => prev.map(s =>
+        s.id === slotId
+          ? { ...s, loadError: null, pendingConfirm: { filePath, hunks, edgeCase: 'newfile' } }
+          : s
+      ))
       return
     }
 
@@ -419,10 +430,12 @@ const executeDeploy = async (patchList, slotIds) => {
               {isFailed && slot.error && (
                 <div className="patcher-error-row">✗ {slot.error}</div>
               )}
-              {slot.pendingConfirm && (
+                            {slot.pendingConfirm && (
                 <div className="patcher-edge-confirm">
                   <span className="patcher-edge-msg">
-                    ⚠ Missing context — {slot.pendingConfirm.edgeCase === 'start'
+                    ⚠ {slot.pendingConfirm.edgeCase === 'newfile'
+                      ? `Create new file: '${slot.pendingConfirm.filePath}'?`
+                      : slot.pendingConfirm.edgeCase === 'start'
                       ? 'Is this change at the beginning of the file?'
                       : 'Is this change at the end of the file?'}
                   </span>
