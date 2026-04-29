@@ -92,8 +92,8 @@ export default function CodePatcher({ project }) {
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [autoRegen, setAutoRegen] = useState(true)
   const timers = useRef({})
-
-  const rootPath = project?.targets?.find((t) => t.isRoot)?.folderPath
+  console.log('PROJECT TARGETS', JSON.stringify(project?.targets))
+  const rootPath = project?.targets?.find((t) => t.isRoot || t.class === 'Root')?.folderPath
 
   // ── Flash a slot red ─────────────────────────────────────────────────────
   const flashRed = (id) => {
@@ -319,8 +319,9 @@ const executeDeploy = async (patchList, slotIds) => {
     }
   }
 
-  const handleDeploySlot = (slotId) => {
+const handleDeploySlot = (slotId) => {
     const slot = slots.find((s) => s.id === slotId)
+    console.log('DEPLOY SLOT', slotId, slot?.filePath, slot?.hunkCount, slot?.status, 'rootPath:', rootPath)
     if (!slot || !slot.filePath || slot.hunkCount === 0 || slot.status === 'deployed') return
     executeDeploy([{ targetPath: slot.filePath, hunks: slot.hunks }], [slotId])
   }

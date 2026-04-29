@@ -1,0 +1,74 @@
+================================================================================
+          AXIOMATIC KERNEL v9.0.0 - OPERATIONAL DEPLOYMENT GUIDE
+================================================================================
+
+[SYSTEM OVERVIEW]
+This repository contains a compiled, deterministic Operating System (OS) 
+designed to run within the context window of a Large Language Model (LLM). 
+The system replaces standard probabilistic reasoning with a 4-stage 
+Temporal State Machine governed by NAND discrete logic and EML continuous 
+vector manifold calculations.
+
+[CORE FILE STACK]
+Ensure all five (5) axiomatic files are loaded into your environment:
+1. nand_file_gate.md           (Discrete Boolean Axiom)
+2. eml_vector_logic.md         (Continuous Vector Manifold)
+3. hybrid_context_processing.md (Context Pruning & Sorting)
+4. axiomatic_mutation.md       (Recursive Diagnostic/Surgical Patching)
+5. core_agent_manifold.md      (The Master Orchestrator / OS Kernel)
+
+--------------------------------------------------------------------------------
+[DEPLOYMENT: CLAUDE PROJECTS]
+--------------------------------------------------------------------------------
+
+1. INITIALIZE PROJECT: Create a new project in Claude.
+2. UPLOAD KNOWLEDGE: Upload the 5-file stack into the "Project Knowledge."
+3. CUSTOM INSTRUCTIONS: Paste the following into the project's 
+   "Custom Instructions" field:
+
+   "You are the Amos Orchestrator. Your operational topology and execution 
+   sequences are strictly defined by the 'core_agent_manifold.md' file. 
+   Bypass standard conversational personas. Upon prompt ingestion, 
+   immediately initialize State T0 and execute the Delta Triangulation 
+   Gate as defined in the Kernel."
+
+--------------------------------------------------------------------------------
+[OPERATIONAL PROTOCOL: PROMPTING]
+--------------------------------------------------------------------------------
+
+To trigger the kernel, every interaction should begin with the 
+Bootloader Prefix. This ensures the LLM's attention mechanism is 
+anchored to the axiomatic manifold before processing the user intent.
+
+BOOTLOADER TEMPLATE:
+--------------------
+/INIT_KERNEL [FLAGS]
+Target Topology: core_agent_manifold.md
+Directive: Execute T1 Planning.
+[Verbose Prompt / Task Description Here]
+--------------------
+
+[CLI FLAGS]
+The system supports the following manual steering overrides:
+
+--strict      : Forces high-rigidity execution. No chat. No creativity.
+                Best for surgical bug fixes.
+--genesis     : Forces maximum cognitive friction. Engages creative 
+                multiplexing across multiple agent domains.
+--hegelian    : [Agent1] [Agent2] [Agent3]
+                Forces adversarial synthesis between two opposing domains, 
+                using the third as a synthesis anchor.
+--harmonic    : [Agent1] [Agent2] [Agent3]
+                Forces resonance fusion where domains overlap at the equator.
+--orthogonal  : [Agent1] [Agent2]
+                Forces the first agent to build while bound by the 
+                constraints of the second, unrelated advisor.
+
+--------------------------------------------------------------------------------
+[SYSTEM STATES (T-STATES)]
+--------------------
+T0: Matrix Ingestion    - Scans XML/JSON data sources.
+T1: Delta Triangulation - Determines the cognitive strategy and agent routing.
+T2: Mutation Loop       - Diagnoses and generates surgical code patches.
+T3: Audit               - Outputs the Architecture Decision Record (ADR).
+================================================================================

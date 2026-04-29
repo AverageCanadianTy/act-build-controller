@@ -3,14 +3,16 @@ body { font-family: 'Inter', sans-serif; background: #0f1115; color: #e2e8f0; ma
 .app-layout { display: flex; height: 100vh; width: 100vw; }
 
 /* ── Sidebar ────────────────────────────────────────────────────────────── */
-.sidebar { width: 200px; background: #1a1d23; border-right: 1px solid #2d3748; padding: 16px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+.sidebar { width: 200px; background: #1a1d23; border-right: 1px solid #2d3748; padding: 16px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; transition: width 0.2s; overflow: hidden; }
 .sidebar-project-name { font-size: 0.75rem; font-weight: 700; color: #3182ce; text-transform: uppercase; letter-spacing: 0.07em; padding-bottom: 12px; border-bottom: 1px solid #2d3748; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
 .nav-group { display: flex; flex-direction: column; gap: 4px; flex: 1; }
-.sidebar button { background: transparent; border: none; color: #718096; text-align: left; padding: 9px 12px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 0.82rem; transition: 0.15s; width: 100%; }
+.sidebar button { background: transparent; border: none; color: #718096; text-align: left; padding: 9px 12px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 0.82rem; transition: 0.15s; width: 100%; display: flex; align-items: center; gap: 8px; }
 .sidebar button:hover { background: #2d3748; color: #fff; }
 .sidebar button.active { background: #3182ce; color: #fff; }
 .sidebar-back-btn { margin-top: auto; color: #4a5568 !important; font-size: 0.75rem !important; border-top: 1px solid #2d3748 !important; padding-top: 12px !important; border-radius: 0 !important; }
 .sidebar-back-btn:hover { color: #a0aec0 !important; background: transparent !important; }
+.sidebar-icon { flex-shrink: 0; font-size: 1rem; width: 1.1rem; text-align: center; }
+.sidebar-label { white-space: nowrap; overflow: hidden; }
 .sidebar-logout-btn { color: #c53030 !important; font-size: 0.75rem !important; padding-top: 8px !important; border-radius: 0 !important; }
 .sidebar-logout-btn:hover { color: #fc8181 !important; background: transparent !important; }
 .picker-user-badge { display: flex; align-items: center; justify-content: center; gap: 10px; }
@@ -44,6 +46,13 @@ body { font-family: 'Inter', sans-serif; background: #0f1115; color: #e2e8f0; ma
 .collab-empty { font-size: 0.78rem; color: #4a5568; font-style: italic; }
 .sidebar-share-btn { color: #3182ce !important; font-size: 0.75rem !important; padding-bottom: 8px !important; border-radius: 0 !important; }
 .sidebar-share-btn:hover { color: #63b3ed !important; background: transparent !important; }
+@media (max-width: 950px) {
+  .sidebar { width: 48px; padding: 12px 6px; }
+  .sidebar-project-name { display: none; }
+  .sidebar-label { display: none; }
+  .sidebar button { padding: 9px 0; justify-content: center; }
+  .sidebar-share-btn, .sidebar-back-btn { justify-content: center; padding: 6px 0 !important; }
+}
 /* ── Content ────────────────────────────────────────────────────────────── */
 .content-area { flex: 1; padding: 32px 40px; overflow-y: auto; min-width: 0; }
 .architect-view h1, .commander-view h1 { margin: 0 0 20px 0; font-size: 1.35rem; color: #fff; }
@@ -160,12 +169,46 @@ body { font-family: 'Inter', sans-serif; background: #0f1115; color: #e2e8f0; ma
 .commander-target-details { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .commander-target-name { font-size: 0.85rem; font-weight: 600; color: #e2e8f0; }
 .commander-target-path { font-size: 0.70rem; color: #4a5568; font-family: 'Fira Code', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.commander-target-meta { font-size: 0.68rem; color: #4a5568; margin-top: 2px; }
 .commander-sheet-badge { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.09em; background: #0d1f10; color: #48bb78; padding: 2px 8px; border-radius: 4px; flex-shrink: 0; border: 1px solid #2d5016; }
 .run-btn { background: #3182ce; color: #fff; border: none; padding: 7px 18px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.80rem; transition: 0.15s; white-space: nowrap; flex-shrink: 0; }
 .run-btn:hover { background: #2b6cb0; }
 .run-btn-disabled { background: #1a1d23 !important; color: #2d3748 !important; cursor: not-allowed !important; border: 1px solid #2d3748; }
 .refresh-btn { background: #0d1f10; color: #48bb78; border: 1px solid #2d5016; padding: 7px 18px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.80rem; transition: 0.15s; white-space: nowrap; flex-shrink: 0; }
 .refresh-btn:hover { background: #162a18; border-color: #48bb78; }
+.drift-warning-banner { background: #2d1f00; color: #fbd38d; border: 1px solid #7b4f00; border-radius: 6px; padding: 8px 14px; margin-bottom: 14px; font-size: 0.78rem; }
+.commander-restore-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0 10px; }
+.commander-restore-info { flex: 1; min-width: 0; }
+.commander-run-cmd { font-family: 'Fira Code', monospace; font-size: 0.78rem; color: #48bb78; background: #0d1f10; padding: 4px 10px; border-radius: 4px; border: 1px solid #2d5016; }
+.commander-run-input { width: 100%; background: #1a1d23; border: 1px solid #2d3748; color: #a0aec0; padding: 5px 10px; border-radius: 4px; font-size: 0.78rem; font-family: 'Fira Code', monospace; }
+.commander-run-input:focus { outline: none; border-color: #4a5568; }
+.restore-trigger-btn { background: transparent; border: 1px solid #4a5568; color: #718096; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 0.78rem; font-weight: 600; white-space: nowrap; transition: 0.15s; }
+.restore-trigger-btn:hover { border-color: #a0aec0; color: #e2e8f0; }
+
+/* ── Restore Tab ─────────────────────────────────────────────────────────── */
+.restore-tab-view { padding: 28px 32px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; height: 100%; box-sizing: border-box; }
+.restore-tab-view h1 { font-size: 1.4rem; font-weight: 700; color: #e2e8f0; margin: 0 0 4px; }
+.restore-info-card { background: #1a1208; border: 1px solid #7b4f00; border-radius: 8px; padding: 14px 18px; display: flex; flex-direction: column; gap: 8px; }
+.restore-info-badge { display: inline-block; font-size: 0.70rem; font-weight: 800; letter-spacing: 0.09em; color: #fbd38d; background: #2d1f00; border: 1px solid #7b4f00; border-radius: 4px; padding: 2px 10px; width: fit-content; }
+.restore-info-text { color: #a0aec0; font-size: 0.84rem; line-height: 1.6; margin: 0; }
+.restore-field-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #718096; margin-bottom: 4px; }
+.restore-field-hint { color: #4a5568; font-size: 0.78rem; line-height: 1.5; margin: 0 0 10px; }
+.restore-run-row { display: flex; gap: 8px; align-items: center; }
+.restore-run-preview { font-family: 'Fira Code', monospace; font-size: 0.78rem; color: #48bb78; background: #0d1f10; padding: 4px 10px; border-radius: 4px; border: 1px solid #2d5016; display: inline-block; margin-top: 8px; }
+.restore-cta-card { border-color: #2a4365 !important; }
+.restore-browse-btn { margin-top: 4px; padding: 10px 28px !important; font-size: 0.88rem !important; }
+.restore-history-table { width: 100%; border-collapse: collapse; font-size: 0.80rem; margin-top: 4px; }
+.restore-history-table th { text-align: left; color: #4a5568; font-weight: 600; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; padding: 0 12px 6px 0; border-bottom: 1px solid #2d3748; }
+.restore-history-table td { padding: 7px 12px 7px 0; border-bottom: 1px solid #1a1d23; color: #a0aec0; vertical-align: middle; }
+.restore-history-version { font-family: 'Fira Code', monospace; color: #63b3ed; font-size: 0.80rem; }
+.restore-history-file { font-family: 'Fira Code', monospace; color: #e2e8f0; font-size: 0.75rem; }
+.restore-history-ts { color: #4a5568; font-size: 0.75rem; white-space: nowrap; }
+
+/* ── Build All ───────────────────────────────────────────────────────────── */
+.build-all-row { margin-bottom: 16px; }
+.build-all-btn { width: 100%; background: #2c5282; color: #fff; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.88rem; letter-spacing: 0.03em; transition: 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.build-all-btn:hover { background: #2a4365; }
+
 
 /* ── Terminal ───────────────────────────────────────────────────────────── */
 .terminal-window { background: #000; border: 1px solid #2d3748; border-radius: 8px; height: 360px; display: flex; flex-direction: column; overflow: hidden; }
@@ -175,6 +218,35 @@ body { font-family: 'Inter', sans-serif; background: #0f1115; color: #e2e8f0; ma
 .terminal-body { flex: 1; padding: 12px 14px; overflow-y: auto; font-family: 'Fira Code', 'Courier New', monospace; font-size: 0.80rem; color: #48bb78; line-height: 1.5; scrollbar-width: thin; scrollbar-color: #2d3748 transparent; }
 .terminal-empty { color: #2d3748; font-style: italic; }
 .log-line { white-space: pre-wrap; padding-left: 8px; border-left: 2px solid #1a2533; margin-bottom: 1px; }
+
+/* ── Restore Modal ───────────────────────────────────────────────────────── */
+.restore-modal-panel { background: #1a1d23; border: 1px solid #2d3748; border-radius: 10px; width: 560px; max-width: 94vw; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; }
+.restore-modal-body { padding: 20px 24px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+.restore-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 24px; border-top: 1px solid #2d3748; }
+.restore-abort-btn { background: transparent; border: 1px solid #c53030; color: #fc8181; padding: 7px 18px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.80rem; transition: 0.15s; }
+.restore-abort-btn:hover { background: #1a0a0a; }
+.restore-idle-block { display: flex; flex-direction: column; gap: 12px; }
+.restore-warning { color: #fbd38d; font-size: 0.78rem; }
+.restore-spinner-block { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px 0; color: #718096; }
+.restore-spinner { width: 28px; height: 28px; border: 3px solid #2d3748; border-top-color: #3182ce; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.restore-direction-badge { display: inline-block; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em; padding: 3px 12px; border-radius: 4px; margin-bottom: 8px; }
+.restore-direction-badge.rollback { background: #2d1f00; color: #fbd38d; border: 1px solid #7b4f00; }
+.restore-direction-badge.update { background: #0d1b2d; color: #63b3ed; border: 1px solid #2b4f7a; }
+.restore-direction-badge.restore { background: #0d1f10; color: #48bb78; border: 1px solid #2d5016; }
+.dep-delta-section { display: flex; flex-direction: column; gap: 6px; }
+.dep-delta-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.09em; color: #4a5568; }
+.dep-delta-row { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; cursor: pointer; }
+.dep-add { color: #48bb78; font-family: 'Fira Code', monospace; }
+.dep-remove { color: #fbd38d; font-family: 'Fira Code', monospace; }
+.restore-dep-clear { color: #48bb78; font-size: 0.82rem; }
+.restore-mini-terminal { background: #000; border: 1px solid #2d3748; border-radius: 6px; height: 180px; padding: 10px 12px; overflow-y: auto; font-family: 'Fira Code', monospace; font-size: 0.78rem; color: #48bb78; line-height: 1.5; }
+.restore-test-prompt { display: flex; flex-direction: column; gap: 10px; color: #a0aec0; font-size: 0.85rem; }
+.restore-done { color: #48bb78; font-size: 0.88rem; }
+.restore-done-block { display: flex; flex-direction: column; gap: 8px; }
+.restore-done-hint { color: #718096; font-size: 0.78rem; margin: 0; }
+.restore-done-hint code { font-family: 'Fira Code', monospace; color: #fbd38d; background: #2d1f00; padding: 1px 6px; border-radius: 3px; }
+.restore-error-msg { color: #fc8181; font-size: 0.85rem; }
 
 /* ── Project Picker ─────────────────────────────────────────────────────── */
 .picker-screen { display: flex; align-items: center; justify-content: center; height: 100vh; width: 100vw; background: #0f1115; }
@@ -190,8 +262,9 @@ body { font-family: 'Inter', sans-serif; background: #0f1115; color: #e2e8f0; ma
 .picker-btn-secondary { background: #1a1d23; color: #a0aec0; border: 1px solid #2d3748; }
 .picker-btn-secondary:hover { border-color: #3182ce; color: #fff; }
 .picker-btn-icon { font-size: 1rem; width: 18px; text-align: center; }
-.picker-recent-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.09em; color: #4a5568; margin-bottom: 8px; }
-.picker-recent-list { display: flex; flex-direction: column; gap: 4px; max-height: 240px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #2d3748 transparent; mask-image: linear-gradient(to bottom, transparent 0%, #000 28px, #000 calc(100% - 28px), transparent 100%); -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 28px, #000 calc(100% - 28px), transparent 100%); }
+.picker-recent { border: 1px solid #2d3748; border-radius: 0; background: rgba(8,10,14,0.5); box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), inset 1px 0 0 rgba(255,255,255,0.025), inset 0 -1px 0 rgba(0,0,0,0.4), inset -1px 0 0 rgba(0,0,0,0.25); }
+.picker-recent-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.09em; color: #4a5568; margin-bottom: 8px; padding: 8px 10px 0; }
+.picker-recent-list { display: flex; flex-direction: column; gap: 4px; max-height: 240px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #2d3748 transparent; padding: 0 10px; mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 36px), transparent 100%); -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 36px), transparent 100%); }
 .picker-recent-item { background: transparent; border: 1px solid #2d3748; border-radius: 6px; padding: 9px 14px; cursor: pointer; text-align: left; transition: 0.15s; display: flex; flex-direction: column; gap: 3px; width: 100%; }
 .picker-recent-item:hover { border-color: #3182ce; background: #1a1d23; }
 .picker-recent-name { font-size: 0.82rem; color: #e2e8f0; font-weight: 600; }
@@ -549,6 +622,15 @@ body { font-family: 'Inter', sans-serif; background: #0f1115; color: #e2e8f0; ma
 .dbconfig-badge-sql { background: #1a2a3d; color: #63b3ed; border-color: #2a4365; }
 .dbconfig-section-label { font-size: 0.88rem; font-weight: 700; color: #e2e8f0; }
 .dbconfig-coming-soon { font-size: 0.70rem; color: #4a5568; background: #2d3748; padding: 2px 8px; border-radius: 8px; margin-left: auto; }
+.dbconfig-sql-group { background: #13151a; border: 1px solid #2d3748; border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; }
+.dbconfig-sql-group:last-child { margin-bottom: 0; }
+.dbconfig-sql-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; color: #63b3ed; text-transform: uppercase; margin-bottom: 10px; }
+.dbconfig-sql-row { display: flex; gap: 8px; align-items: center; }
+.dbconfig-sql-input { flex: 1; background: #0d0f12; border: 1px solid #2d3748; border-radius: 6px; padding: 7px 10px; font-size: 0.78rem; color: #e2e8f0; font-family: 'Fira Code', monospace; outline: none; }
+.dbconfig-sql-input:focus { border-color: #63b3ed; }
+.dbconfig-sql-input::placeholder { color: #4a5568; }
+.dbconfig-sql-status { font-size: 0.72rem; color: #718096; margin-top: 8px; word-break: break-all; font-family: 'Fira Code', monospace; }
+.dbconfig-sql-status:first-of-type { color: #48bb78; }
 
 /* ── Dev Kit Tab ──────────────────────────────────────────────────────────── */
 .devkit-view { padding: 28px 32px; flex: 1; overflow-y: auto; }
@@ -574,6 +656,7 @@ body { font-family: 'Inter', sans-serif; background: #0f1115; color: #e2e8f0; ma
 .devkit-item-type { font-size: 0.64rem; color: #4a5568; background: #0f1115; padding: 1px 6px; border-radius: 3px; }
 .devkit-lock-badge { font-size: 0.66rem; color: #718096; background: #2d3748; padding: 1px 7px; border-radius: 8px; flex-shrink: 0; }
 .devkit-pending-badge { font-size: 0.66rem; color: #f6ad55; background: #1a1400; border: 1px solid #744210; padding: 1px 7px; border-radius: 8px; flex-shrink: 0; }
+.devkit-verifying-badge { font-size: 0.66rem; color: #63b3ed; background: #1a2a3d; border: 1px solid #2a4365; padding: 1px 7px; border-radius: 8px; margin-left: 8px; font-weight: 400; vertical-align: middle; }
 .devkit-item-actions { flex-shrink: 0; }
 .devkit-install-btn { background: #3182ce; color: #fff; border: none; padding: 4px 14px; border-radius: 4px; cursor: pointer; font-size: 0.74rem; font-weight: 600; transition: background 0.12s; }
 .devkit-install-btn:hover:not(:disabled) { background: #2b6cb0; }
@@ -581,3 +664,96 @@ body { font-family: 'Inter', sans-serif; background: #0f1115; color: #e2e8f0; ma
 .devkit-uninstall-btn { background: transparent; border: 1px solid #2d3748; color: #718096; padding: 4px 14px; border-radius: 4px; cursor: pointer; font-size: 0.74rem; transition: 0.12s; }
 .devkit-uninstall-btn:hover:not(:disabled) { border-color: #fc8181; color: #fc8181; background: #200d0d; }
 .devkit-uninstall-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.devkit-section { margin-bottom: 20px; }
+.devkit-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.devkit-section-label { font-size: 0.72rem; font-weight: 700; color: #a0aec0; text-transform: uppercase; letter-spacing: 0.07em; }
+.devkit-section-count { font-size: 0.68rem; color: #4a5568; background: #2d3748; padding: 2px 8px; border-radius: 8px; }
+.devkit-stack-table { width: 100%; border-collapse: collapse; background: #111318; border: 1px solid #2d3748; border-radius: 8px; overflow: hidden; }
+.devkit-stack-row { border-bottom: 1px solid #1a1d23; }
+.devkit-stack-row:last-child { border-bottom: none; }
+.devkit-stack-row.is-locked { opacity: 0.7; }
+.devkit-stack-label { padding: 8px 14px; font-size: 0.82rem; color: #e2e8f0; }
+.devkit-stack-table td { padding: 8px 10px; vertical-align: middle; }
+.devkit-stack-actions { text-align: right; padding-right: 14px; }
+.devkit-confirm-modal { background: #161920; border: 1px solid #2d3748; border-radius: 10px; padding: 20px 24px; width: 340px; display: flex; flex-direction: column; gap: 12px; }
+.devkit-confirm-title { font-size: 0.90rem; font-weight: 700; color: #e2e8f0; }
+.devkit-confirm-body { font-size: 0.80rem; color: #718096; line-height: 1.5; }
+.devkit-confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
+/* ── Connections Tab ─────────────────────────────────────────────────────── */
+.connections-view { max-width: 560px; }
+.connections-section { background: #161920; border: 1px solid #2d3748; border-radius: 8px; padding: 20px 24px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; }
+.connections-section-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #4a5568; margin-bottom: 4px; }
+.connections-service-row { display: flex; align-items: center; gap: 12px; }
+.connections-service-icon { font-size: 1.4rem; flex-shrink: 0; }
+.connections-service-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.connections-service-name { font-size: 0.88rem; font-weight: 600; color: #e2e8f0; }
+.connections-service-status { font-size: 0.72rem; color: #4a5568; }
+.connections-service-status.connected { color: #48bb78; }
+.connections-service-status.error { color: #fc8181; }
+.connections-pat-row { display: flex; gap: 8px; }
+.connections-pat-input { flex: 1; background: #0f1115; border: 1px solid #2d3748; border-radius: 6px; padding: 8px 12px; color: #e2e8f0; font-size: 0.82rem; font-family: 'Fira Code', monospace; }
+.connections-pat-input:focus { outline: none; border-color: #3182ce; }
+.connections-connect-btn { background: #3182ce; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.80rem; font-weight: 600; transition: 0.15s; white-space: nowrap; }
+.connections-connect-btn:hover { background: #2b6cb0; }
+.connections-connect-btn:disabled { background: #2d3748; color: #4a5568; cursor: not-allowed; }
+.connections-scopes-note { font-size: 0.70rem; color: #4a5568; }
+/* ── Release Builder Tab ─────────────────────────────────────────────────── */
+.release-view { max-width: 640px; display: flex; flex-direction: column; gap: 16px; }
+.release-card { background: #161920; border: 1px solid #2d3748; border-radius: 8px; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px; }
+.release-card-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #4a5568; }
+.release-version-row { display: flex; align-items: center; gap: 12px; }
+.release-version-current { font-size: 1.4rem; font-weight: 700; color: #e2e8f0; font-family: 'Fira Code', monospace; flex: 1; }
+.release-bump-btn { background: #1a1d23; border: 1px solid #2d3748; color: #a0aec0; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.78rem; font-weight: 600; transition: 0.15s; }
+.release-bump-btn:hover { border-color: #3182ce; color: #fff; }
+.release-target-grid { display: flex; flex-direction: column; gap: 8px; }
+.release-target-card { display: flex; align-items: center; gap: 12px; background: #111318; border: 1px solid #2d3748; border-radius: 6px; padding: 10px 14px; cursor: pointer; transition: 0.15s; }
+.release-target-card:hover { border-color: #4a5568; }
+.release-target-card.selected { border-color: #3182ce; background: #0d1829; }
+.release-target-card.disabled { opacity: 0.45; cursor: not-allowed; }
+.release-target-badge { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.08em; padding: 2px 7px; border-radius: 4px; flex-shrink: 0; }
+.release-target-badge.linux { background: #0d1f10; color: #68d391; border: 1px solid #2d5016; }
+.release-target-badge.win { background: #0d1929; color: #63b3ed; border: 1px solid #1a3a5c; }
+.release-target-badge.mac { background: #1a1209; color: #f6ad55; border: 1px solid #5c3a0d; }
+.release-target-badge.gh { background: #16121e; color: #b794f4; border: 1px solid #44337a; }
+.release-target-name { font-size: 0.84rem; color: #e2e8f0; font-weight: 500; flex: 1; }
+.release-target-status { font-size: 0.70rem; color: #4a5568; }
+.release-target-status.ready { color: #48bb78; }
+.release-target-status.warn { color: #f6ad55; }
+.release-target-status.ci-only { color: #63b3ed; }
+.release-advisor { display: flex; flex-direction: column; gap: 8px; }
+.release-advisor-item { display: flex; align-items: flex-start; gap: 10px; background: #111318; border: 1px solid #2d3748; border-radius: 6px; padding: 10px 14px; }
+.release-advisor-icon { font-size: 0.9rem; flex-shrink: 0; margin-top: 1px; }
+.release-advisor-text { font-size: 0.78rem; color: #a0aec0; line-height: 1.5; }
+.release-advisor-text strong { color: #e2e8f0; }
+.release-advisor-action { font-size: 0.72rem; color: #3182ce; cursor: pointer; margin-top: 2px; display: inline-block; }
+.release-advisor-action:hover { color: #63b3ed; }
+.release-notes-textarea { width: 100%; min-height: 100px; background: #0f1115; border: 1px solid #2d3748; border-radius: 6px; padding: 10px 12px; color: #e2e8f0; font-size: 0.82rem; font-family: 'Inter', sans-serif; resize: vertical; box-sizing: border-box; }
+.release-notes-textarea:focus { outline: none; border-color: #3182ce; }
+.release-guide-toggle { display: flex; align-items: center; gap: 8px; font-size: 0.80rem; color: #a0aec0; cursor: pointer; }
+.release-guide-toggle input { cursor: pointer; }
+.release-guide-box { background: #0d1829; border: 1px solid #1a3a5c; border-radius: 6px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.release-guide-step { font-size: 0.78rem; color: #a0aec0; line-height: 1.6; }
+.release-guide-step strong { color: #63b3ed; }
+.release-execute-row { display: flex; gap: 10px; }
+.release-exec-btn { flex: 1; padding: 10px 0; border-radius: 6px; border: none; font-size: 0.84rem; font-weight: 700; cursor: pointer; transition: 0.15s; }
+.release-exec-btn.local { background: #2d3748; color: #e2e8f0; }
+.release-exec-btn.local:hover { background: #3d4a5c; }
+.release-exec-btn.ci { background: #3182ce; color: #fff; }
+.release-exec-btn.ci:hover { background: #2b6cb0; }
+.release-exec-btn:disabled { background: #1a1d23 !important; color: #2d3748 !important; cursor: not-allowed !important; border: 1px solid #2d3748; }
+.release-run-status { display: flex; flex-direction: column; gap: 6px; }
+.release-run-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 0.76rem; font-weight: 600; padding: 4px 10px; border-radius: 4px; }
+.release-run-badge.queued { background: #1a1d23; color: #a0aec0; border: 1px solid #2d3748; }
+.release-run-badge.in_progress { background: #0d1929; color: #63b3ed; border: 1px solid #1a3a5c; }
+.release-run-badge.success { background: #0d1f10; color: #48bb78; border: 1px solid #2d5016; }
+.release-run-badge.failure { background: #1f0d0d; color: #fc8181; border: 1px solid #5c1a1a; }
+.release-run-link { font-size: 0.72rem; color: #3182ce; cursor: pointer; }
+.release-run-link:hover { color: #63b3ed; }
+/* ── CI Status Bar (Commander) ─────────────────────────────────────────────── */
+.ci-status-bar { display: flex; align-items: center; gap: 10px; background: #111318; border: 1px solid #2d3748; border-radius: 6px; padding: 8px 14px; margin-bottom: 12px; }
+.ci-status-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #4a5568; flex-shrink: 0; }
+.ci-status-none { font-size: 0.76rem; color: #4a5568; }
+.ci-status-error { font-size: 0.72rem; color: #fc8181; }
+.ci-refresh-btn { background: transparent; border: 1px solid #2d3748; color: #718096; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 0.72rem; transition: 0.15s; margin-left: auto; flex-shrink: 0; }
+.ci-refresh-btn:hover { border-color: #4a5568; color: #e2e8f0; }
+.ci-refresh-btn:disabled { opacity: 0.4; cursor: not-allowed; }

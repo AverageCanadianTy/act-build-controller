@@ -9,6 +9,11 @@ import CodePatcher from './components/CodePatcher'
 import CollabManager from './components/CollabManager'
 import DevKit from './components/DevKit'
 import DatabaseConfig from './components/DatabaseConfig'
+import RestoreModal from './components/RestoreModal'
+import Connections from './components/Connections'
+import ReleaseBuilder from './components/ReleaseBuilder'
+import ErrorBoundary from './components/ErrorBoundary'
+import CIStatus from './components/CIStatus'
 // ── Helpers ────────────────────────────────────────────────────────────────
 const toSafeName = (str) => str.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '')
 
@@ -45,9 +50,20 @@ const normalizeProject = (project) => ({
   devKit: project.devKit || { selections: [], installed: [], pending: [], activeDependencies: [] },
   dbTargets: project.dbTargets || [],
   matrixVersion: project.matrixVersion ?? 0,
-  databaseType: project.databaseType ?? null
+    databaseType: project.databaseType ?? null,
+  matrixHistory: project.matrixHistory || [],
+  runCommand: project.runCommand ?? null,
 })
 
+const timeAgo = (iso) => {
+  const diff = Date.now() - new Date(iso).getTime()
+  const m = Math.floor(diff / 60000)
+  if (m < 1) return 'just now'
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  return `${Math.floor(h / 24)}d ago`
+}
 // ── Exclusion Modal ────────────────────────────────────────────────────────
 function ExclusionModal({ target, onToggle, onSelectAll, onDeselectAll, onClose }) {
   const getAllPaths = () => {
@@ -167,9 +183,16 @@ export default function App() {
     const terminalRef = useRef(null)
   const [showDirectoryBuilder, setShowDirectoryBuilder] = useState(false)
   const [showCollabManager, setShowCollabManager] = useState(false)
-  const [bloatAdvisory, setBloatAdvisory] = useState([])
+        const [bloatAdvisory, setBloatAdvisory] = useState([])
   const [dismissedBloat, setDismissedBloat] = useState(new Set())
-  const buildQueueRef = useRef([])
+    const buildQueueRef = useRef([])
+  const [showRestoreModal, setShowRestoreModal] = useState(false)
+  const projectFilePathRef = useRef(null)
+  const [driftWarning, setDriftWarning] = useState(false)
+  const [releaseRunStatus, setReleaseRunStatus] = useState(null)
+  const [releaseDispatching, setReleaseDispatching] = useState(false)
+  const releasePollRef = useRef(null)
+  const addLog = (msg) => setLogs(prev => [...prev, msg])
 
   // Auto-login check
   useEffect(() => {
@@ -182,21 +205,31 @@ export default function App() {
 
   // Load OAuth status on mount
   useEffect(() => {
-    if (!window.api) return
+        if (!window.api) return
     window.api.getOAuthStatus().then(setOauthStatus)
   }, [])
 
+  // Sync projectFilePathRef for use in closures
+  useEffect(() => { projectFilePathRef.current = projectFilePath }, [projectFilePath])
+
   useEffect(() => {
         if (!window.api) return
-    const unsub = window.api.onLog(async (data) => {
+        const unsub = window.api.onLog(async (data) => {
       setLogs(prev => [...prev.slice(-200), data])
-      if (data === '✓ Done\n' && buildQueueRef.current.length > 0) {
-        const pending = buildQueueRef.current.shift()
-        const result = await window.api.scanBloat(pending)
-        setBloatAdvisory(prev => {
-          const filtered = prev.filter(b => b.targetId !== pending.targetId)
-          return result.triggered ? [...filtered, { targetId: pending.targetId, folderName: result.folderName, size: result.size }] : filtered
-        })
+      if (data === '✓ Done\n') {
+        const pfp = projectFilePathRef.current
+        if (pfp) {
+          const loaded = await window.api.loadProject(pfp)
+          if (loaded.success) setProject(normalizeProject(loaded.data))
+        }
+        if (buildQueueRef.current.length > 0) {
+          const pending = buildQueueRef.current.shift()
+          const result = await window.api.scanBloat(pending)
+          setBloatAdvisory(prev => {
+            const filtered = prev.filter(b => b.targetId !== pending.targetId)
+            return result.triggered ? [...filtered, { targetId: pending.targetId, folderName: result.folderName, size: result.size }] : filtered
+          })
+        }
       }
     })
     return () => { if (unsub) unsub() }
@@ -233,8 +266,21 @@ export default function App() {
         setProjectFilePath(result.filePath)
         window.api.addRecentProject({ filePath: result.filePath, projectName: project.name })
       }
-    })
+        })
   }, [project])
+
+  // Drift check — fires on project load
+  useEffect(() => {
+    if (!projectFilePath || !window.api) return
+    const history = project?.matrixHistory
+    if (!history?.length) { setDriftWarning(false); return }
+    const lastBuilt = new Date(history[history.length - 1].timestamp)
+    window.api.getFileMtime(projectFilePath).then(result => {
+      if (result.success && result.mtime) {
+        setDriftWarning(new Date(result.mtime) > lastBuilt)
+      }
+    })
+  }, [projectFilePath])
 
     const handleProjectLoaded = (loadedProject, filePath) => {
     setProject(normalizeProject(loadedProject))
@@ -372,9 +418,9 @@ export default function App() {
       await window.api.writeRepomixIgnore({ folderPath: target.folderPath, ignorePatterns: target.ignorePatterns })
     }
 
-        setLogs(prev => [...prev, `[${label}] Processing ${filename}...\n`])
+                setLogs(prev => [...prev, `[${label}] Processing ${filename}...\n`])
     buildQueueRef.current.push({ targetId: target.id, outputFile, folderPath: target.folderPath, ignorePatterns: target.ignorePatterns || [] })
-    window.api.runScript(`cd "${target.folderPath}" && repomix --output "${outputFile}"`)
+        window.api.runScript({ command: `cd "${target.folderPath}" && repomix --output "${outputFile}"`, projectFilePath })
   }
 
   const runSheetFetch = async (group) => {
@@ -384,11 +430,47 @@ export default function App() {
     await window.api.fetchSheetData({ group, knowledgePath: project.knowledgePath })
   }
 
-  const getOutputPath = (target) =>
+  const runSqlExport = async (db) => {
+    if (!project.knowledgePath) return
+    const label = `${project.name} → ${db.label}`
+    setLogs(prev => [...prev, `[${label}] Generating schema JSON...\n`])
+    const fn = db.type === 'sqlite' ? window.api.generateSqliteSchema : window.api.generatePostgresSchema
+    const args = db.type === 'sqlite'
+      ? { dbPath: db.connectionInfo, projectName: project.name, knowledgePath: project.knowledgePath }
+      : { connectionString: db.connectionInfo, projectName: project.name, knowledgePath: project.knowledgePath }
+    const r = await fn(args)
+    if (r.success) {
+      setLogs(prev => [...prev, `[${label}] ✓ Written to ${r.outputPath}\n`])
+      setProject(prev => ({ ...prev, dbTargets: prev.dbTargets.map(t => t.id === db.id ? { ...t, lastExported: new Date().toISOString() } : t) }))
+    } else {
+      setLogs(prev => [...prev, `[${label}] ✗ ${r.error}\n`])
+    }
+  }
+
+    
+    const getOutputPath = (target) =>
     project.knowledgeAbsolute ? project.knowledgePath : (target.outputPath || project.knowledgePath)
+
+  const runAllMatrices = async () => {
+    const readyTargets = project.targets.filter(t => t.folderPath && getOutputPath(t))
+    if (readyTargets.length === 0) return
+    setLogs(prev => [...prev, `[Context Lattice] Starting full matrix build...\n`])
+    for (const target of readyTargets) {
+      await new Promise((resolve) => {
+        const unsub = window.api.onLog((data) => {
+          if (data === '✓ Done\n' || data.startsWith('\n[✗ Failed')) {
+            unsub()
+            resolve()
+          }
+        })
+        runTargetBuild(target)
+      })
+    }
+  }
 
     const modalTarget = modalTargetId ? project?.targets.find(t => t.id === modalTargetId) : null
   const tracker = project?.sheetTracker || { enabled: false, groups: [] }
+
 
   const handleLogout = async () => {
     if (activeUser) await window.api.updateAutoLogin({ userId: activeUser.id, autoLogin: false })
@@ -457,30 +539,57 @@ if (!project) return (
         />
       )}
 
+            {showRestoreModal && (
+        <RestoreModal
+          project={project}
+          projectFilePath={projectFilePath}
+                    onClose={() => setShowRestoreModal(false)}
+        />
+      )}
+
       <nav className="sidebar">
         <div className="sidebar-project-name">{project.name}</div>
-                <div className="nav-group">
-          <button className={activeTab === 'architect' ? 'active' : ''} onClick={() => setActiveTab('architect')}>
-            Matrix Architect
+        <div className="nav-group">
+          <button className={activeTab === 'architect' ? 'active' : ''} onClick={() => setActiveTab('architect')} title="Matrix Architect">
+            <span className="sidebar-icon">⊞</span>
+            <span className="sidebar-label">Matrix Architect</span>
           </button>
-          <button className={activeTab === 'database' ? 'active' : ''} onClick={() => setActiveTab('database')}>
-            Database Config
+          <button className={activeTab === 'database' ? 'active' : ''} onClick={() => setActiveTab('database')} title="Database Config">
+            <span className="sidebar-icon">◉</span>
+            <span className="sidebar-label">Database Config</span>
           </button>
-          <button className={activeTab === 'devkit' ? 'active' : ''} onClick={() => setActiveTab('devkit')}>
-            Dev Kit
+          <button className={activeTab === 'devkit' ? 'active' : ''} onClick={() => setActiveTab('devkit')} title="Dev Kit">
+            <span className="sidebar-icon">⚙</span>
+            <span className="sidebar-label">Dev Kit</span>
           </button>
-          <button className={activeTab === 'patcher' ? 'active' : ''} onClick={() => setActiveTab('patcher')}>
-            Code Patcher
+          <button className={activeTab === 'patcher' ? 'active' : ''} onClick={() => setActiveTab('patcher')} title="Code Patcher">
+            <span className="sidebar-icon">◈</span>
+            <span className="sidebar-label">Code Patcher</span>
           </button>
-          <button className={activeTab === 'commander' ? 'active' : ''} onClick={() => setActiveTab('commander')}>
-            Command Center
+          <button className={activeTab === 'commander' ? 'active' : ''} onClick={() => setActiveTab('commander')} title="Command Center">
+            <span className="sidebar-icon">⬡</span>
+            <span className="sidebar-label">Command Center</span>
+          </button>
+                    <button className={activeTab === 'restore' ? 'active' : ''} onClick={() => setActiveTab('restore')} title="Restore">
+            <span className="sidebar-icon">↩</span>
+            <span className="sidebar-label">Restore</span>
+          </button>
+          <button className={activeTab === 'connections' ? 'active' : ''} onClick={() => setActiveTab('connections')} title="Connections">
+            <span className="sidebar-icon">⇄</span>
+            <span className="sidebar-label">Connections</span>
+          </button>
+          <button className={activeTab === 'release' ? 'active' : ''} onClick={() => setActiveTab('release')} title="Release Builder">
+            <span className="sidebar-icon">▲</span>
+            <span className="sidebar-label">Release Builder</span>
           </button>
         </div>
-        <button className="sidebar-share-btn" onClick={() => setShowCollabManager(true)}>
-          ⬡ Share Project
+        <button className="sidebar-share-btn" onClick={() => setShowCollabManager(true)} title="Share Project">
+          <span className="sidebar-icon">👤</span>
+          <span className="sidebar-label">Share Project</span>
         </button>
-        <button className="sidebar-back-btn" onClick={() => { setProject(null); setProjectFilePath(null) }}>
-          ← Projects
+        <button className="sidebar-back-btn" onClick={() => { setProject(null); setProjectFilePath(null) }} title="← Projects">
+          <span className="sidebar-icon">←</span>
+          <span className="sidebar-label">← Projects</span>
         </button>
       </nav>
 
@@ -614,18 +723,31 @@ if (!project) return (
 
         {/* ── COMMANDER ──────────────────────────────────────────────────── */}
         {activeTab === 'commander' && (
-          <div className="commander-view">
+                    <div className="commander-view">
             <h1>Command Center</h1>
 
+            {driftWarning && (
+              <div className="drift-warning-banner">
+                ⚠ Project may have changed since last matrix build.
+                            </div>
+            )}
+            <div className="build-all-row">
+              <button
+                className={`build-all-btn${project.targets.some(t => t.folderPath && getOutputPath(t)) ? '' : ' run-btn-disabled'}`}
+                onClick={() => project.targets.some(t => t.folderPath && getOutputPath(t)) && runAllMatrices()}
+                disabled={!project.targets.some(t => t.folderPath && getOutputPath(t))}
+              >
+                ⬡ Build All Matrices
+              </button>
+            </div>
             <div className="commander-targets">
               {/* Scan targets */}
-              {project.targets.length > 0 && (
+                            {project.targets.length > 0 && (
                 <div className="commander-section-label">File Matrices</div>
               )}
-              {project.targets.map((target) => {
-                const outPath = getOutputPath(target)
-                const ready = !!(target.folderPath && outPath)
+                            {project.targets.map((target) => {
                 const label = target.isRoot ? project.name : `${project.name} → ${target.class}`
+                const lastBuild = (project.matrixHistory || []).at(-1)
                 return (
                   <div key={target.id} className="commander-target-row">
                     <div className="commander-target-info">
@@ -637,16 +759,11 @@ if (!project) return (
                         <span className="commander-target-path">
                           {target.folderPath ? `→ ${toSubfolderName(target)}/` : 'No folder set'}
                         </span>
-                      </div>
+                        <span className="commander-target-meta">
+                                                    {lastBuild ? `v${lastBuild.version} · ${timeAgo(lastBuild.timestamp)}` : 'Never built'}
+                        </span>
+                                            </div>
                     </div>
-                    <button
-                      className={`run-btn${!ready ? ' run-btn-disabled' : ''}`}
-                      onClick={() => ready && runTargetBuild(target)}
-                      disabled={!ready}
-                      title={!ready ? 'Configure folder and output path first' : `Build ${label}`}
-                    >
-                      Execute Build
-                    </button>
                   </div>
                 )
               })}
@@ -679,10 +796,49 @@ if (!project) return (
                       </div>
                     )
                   })}
+                                </>
+              )}
+
+              {/* DB Targets */}
+              {project.dbTargets?.length > 0 && (
+                <>
+                                    <div className="commander-section-label">DB Targets</div>
+                  {project.dbTargets.map((db) => {
+                    const isSheets = db.type === 'sheets'
+                    const isSQL = db.type === 'sqlite' || db.type === 'postgres'
+                    const ready = isSheets
+                      ? !!(db.sheetIds?.length > 0 && project.knowledgePath && oauthStatus?.hasToken)
+                      : isSQL ? !!(db.connectionInfo && project.knowledgePath) : false
+                    const badge = db.type ? db.type.toUpperCase() : 'DB'
+                    return (
+                      <div key={db.id} className="commander-target-row">
+                        <div className="commander-target-info">
+                          <span className="commander-sheet-badge">{badge}</span>
+                          <div className="commander-target-details">
+                            <span className="commander-target-name">{project.name} → {db.label || db.id}</span>
+                            <span className="commander-target-path">
+                              {isSQL ? (db.lastExported ? `Last exported: ${new Date(db.lastExported).toLocaleString()}` : 'Not yet exported') : `${db.sheetIds?.length || 0} sheet(s)`}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          className={`refresh-btn${!ready ? ' run-btn-disabled' : ''}`}
+                          onClick={() => ready && (isSQL ? runSqlExport(db) : runSheetFetch(db))}
+                          disabled={!ready}
+                          title={!ready ? 'Configure DB target first' : `Generate JSON for ${db.label}`}
+                        >
+                          Generate JSON
+                        </button>
+                      </div>
+                    )
+                                    })}
                 </>
               )}
-            </div>
+                        </div>
 
+            {activeUser && (
+              <CIStatus activeUser={activeUser} project={project} />
+            )}
             <div className="terminal-window">
               <div className="terminal-header">
                 Terminal Output — repomix engine
@@ -699,19 +855,83 @@ if (!project) return (
             </div>
                     </div>
         )}
-        {activeTab === 'patcher' && (
+                {activeTab === 'patcher' && (
           <CodePatcher project={project} />
         )}
-                {activeTab === 'devkit' && project && (
-          <DevKit project={project} onUpdate={updateProject} />
+        {activeTab === 'restore' && project && (
+          <div className="restore-tab-view">
+            <h1>↩ Restore</h1>
+            <div className="restore-info-card">
+              <span className="restore-info-badge">⚠ Destructive Operation</span>
+              <p className="restore-info-text">Select a prior ACT Matrix XML snapshot to roll back, update, or re-apply your project's codebase. ACT will extract the files into a staging directory, check for dependency changes, and let you test the app before anything is permanently changed.</p>
+            </div>
+            <div className="project-settings-card">
+              <div className="restore-field-label">Run Command</div>
+              <p className="restore-field-hint">Used to launch and test the restored app from the staging directory before the swap is applied. Set it once and it persists with the project.</p>
+              <div className="restore-run-row">
+                <input
+                  key={project.runCommand}
+                  className="commander-run-input"
+                  placeholder="e.g. npm run dev"
+                  defaultValue={project.runCommand || ''}
+                  onBlur={e => updateProject({ runCommand: e.target.value || null })}
+                />
+              </div>
+              {project.runCommand && (
+                <code className="restore-run-preview">{project.runCommand}</code>
+              )}
+            </div>
+            <div className="project-settings-card restore-cta-card">
+              <div className="restore-field-label">Select a Matrix to Restore From</div>
+              <p className="restore-field-hint">Opens a file picker so you can select a prior ACT Matrix XML file from disk. Once selected, ACT will walk you through staging, dependency review, testing, and the final apply step.</p>
+              <button className="run-btn restore-browse-btn" onClick={() => setShowRestoreModal(true)}>
+                Browse for Matrix XML…
+              </button>
+            </div>
+            {project.matrixHistory?.length > 0 && (
+              <div className="project-settings-card">
+                <div className="restore-field-label">Build History</div>
+                <p className="restore-field-hint">Your last {Math.min(project.matrixHistory.length, 5)} matrix build(s). The XML file for each is in your knowledge folder.</p>
+                <table className="restore-history-table">
+                  <thead>
+                    <tr>
+                      <th>Version</th>
+                      <th>File</th>
+                      <th>Built</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...project.matrixHistory].reverse().slice(0, 5).map((entry) => (
+                      <tr key={entry.version}>
+                        <td><span className="restore-history-version">v{entry.version}</span></td>
+                        <td className="restore-history-file">{entry.file}</td>
+                        <td className="restore-history-ts">{new Date(entry.timestamp).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+                        {activeTab === 'devkit' && project && (
+                    <DevKit project={project} onUpdate={updateProject} />
         )}
         {activeTab === 'database' && project && (
           <DatabaseConfig
             project={project}
             oauthStatus={oauthStatus}
-            onUpdate={updateProject}
+                        onUpdate={updateProject}
             onOAuthRequest={() => setShowOAuthSetup(true)}
           />
+        )}
+                {activeTab === 'connections' && (
+          <Connections activeUser={activeUser} oauthStatus={oauthStatus} onOAuthRequest={() => setShowOAuthSetup(true)} />
+        )}
+                {activeTab === 'release' && project && (
+          <ErrorBoundary name="ReleaseBuilder">
+            <ReleaseBuilder project={project} projectFilePath={projectFilePath} activeUser={activeUser} runStatus={releaseRunStatus} setRunStatus={setReleaseRunStatus} dispatching={releaseDispatching} setDispatching={setReleaseDispatching} pollRef={releasePollRef} addLog={addLog} />
+          </ErrorBoundary>
         )}
       </section>
     </main>

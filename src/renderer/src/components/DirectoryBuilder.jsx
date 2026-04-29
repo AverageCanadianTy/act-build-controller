@@ -32,15 +32,19 @@ const DEV_KIT_CATALOG = [
     { id: 'flask',   label: 'Flask',       cmd: 'pip3 install flask', type: 'pip' },
     { id: 'fastapi', label: 'FastAPI',     cmd: 'pip3 install fastapi uvicorn', type: 'pip' },
   ]},
-  { category: 'Database', items: [
-    { id: 'google-auth',    label: 'Google Auth (Sheets)',    cmd: 'pip3 install google-auth-oauthlib google-api-python-client', type: 'pip',   dbTypes: ['sheets'] },
+    { category: 'Database', items: [
+    { id: 'google-auth-oauthlib', label: 'Google Auth (Sheets)',    cmd: 'pip3 install google-auth-oauthlib google-api-python-client', type: 'pip',   dbTypes: ['sheets'] },
     { id: 'better-sqlite3', label: 'SQLite (better-sqlite3)', cmd: 'npm install better-sqlite3',    type: 'npm',   dbTypes: ['sqlite'] },
     { id: 'pg',             label: 'PostgreSQL (pg)',         cmd: 'npm install pg',                 type: 'npm',   dbTypes: ['postgres'] },
     { id: 'sqlalchemy',     label: 'SQLAlchemy',              cmd: 'pip3 install sqlalchemy',        type: 'pip',   dbTypes: ['sqlite', 'postgres'] },
-    { id: 'psycopg2',       label: 'psycopg2',                cmd: 'pip3 install psycopg2-binary',   type: 'pip',   dbTypes: ['postgres'] },
+    { id: 'psycopg2-binary', label: 'psycopg2',               cmd: 'pip3 install psycopg2-binary',   type: 'pip',   dbTypes: ['postgres'] },
   ]},
-  { category: 'Security', items: [
-    { id: 'bcrypt', label: 'bcrypt', cmd: 'npm install bcryptjs', type: 'npm' },
+    { category: 'Security', items: [
+    { id: 'bcryptjs', label: 'bcryptjs', cmd: 'npm install bcryptjs', type: 'npm' },
+  ]},
+  { category: 'Node.js', items: [
+    { id: 'nvm',     label: 'nvm',     cmd: 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash', type: 'shell' },
+    { id: 'nodemon', label: 'nodemon', cmd: 'npm install -g nodemon', type: 'npm' },
   ]},
 ]
 

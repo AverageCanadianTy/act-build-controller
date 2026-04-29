@@ -23,16 +23,30 @@ const api = {
   scanOutputVersion: (args) => ipcRenderer.invoke('scan-output-version', args),
 
   // Repomixignore
-  writeRepomixIgnore: (args) => ipcRenderer.invoke('write-repomixignore', args),
+    writeRepomixIgnore: (args) => ipcRenderer.invoke('write-repomixignore', args),
     parseRepomixIgnore: (filePath) => ipcRenderer.invoke('parse-repomixignore', filePath),
+
+    // Matrix utilities
+  getFileMtime: (filePath) => ipcRenderer.invoke('get-file-mtime', filePath),
+  readMatrixHeader: (xmlPath) => ipcRenderer.invoke('read-matrix-header', xmlPath),
+
+  // Restore
+  stageRestore: (args) => ipcRenderer.invoke('stage-restore', args),
+  validateRestore: (args) => ipcRenderer.invoke('validate-restore', args),
+  applyRestore: (args) => ipcRenderer.invoke('apply-restore', args),
+  abortRestore: (args) => ipcRenderer.invoke('abort-restore', args),
 
   // Build
   runScript: (args) => ipcRenderer.send('execute-command', args),
 
   // Directory Builder
     createProjectDirectory: (args) => ipcRenderer.invoke('create-project-directory', args),
-  scanBloat: (args) => ipcRenderer.invoke('scan-bloat', args),
+        scanBloat: (args) => ipcRenderer.invoke('scan-bloat', args),
   checkRuntimeDeps: () => ipcRenderer.invoke('check-runtime-deps'),
+  verifyDevkitInstalled: (args) => ipcRenderer.invoke('verify-devkit-installed', args),
+  generateSqliteSchema: (args) => ipcRenderer.invoke('generate-sqlite-schema', args),
+  generatePostgresSchema: (args) => ipcRenderer.invoke('generate-postgres-schema', args),
+  writeMigrationDoc: (args) => ipcRenderer.invoke('write-migration-doc', args),
 
   // OAuth
   getOAuthStatus: () => ipcRenderer.invoke('get-oauth-status'),
@@ -57,6 +71,23 @@ const api = {
 // Code Patcher
 readFileForPatch: (filePath) => ipcRenderer.invoke('read-file-for-patch', filePath),
 applyPatches: (args) => ipcRenderer.invoke('apply-patches', args),
+
+  // GitHub & Release
+  saveGithubPat: (args) => ipcRenderer.invoke('save-github-pat', args),
+  getGithubPat: (userId) => ipcRenderer.invoke('get-github-pat', userId),
+  testGithubConnection: (args) => ipcRenderer.invoke('test-github-connection', args),
+  generateGithubWorkflow: (args) => ipcRenderer.invoke('generate-github-workflow', args),
+  dispatchGithubWorkflow: (args) => ipcRenderer.invoke('dispatch-github-workflow', args),
+  pollGithubRun: (args) => ipcRenderer.invoke('poll-github-run', args),
+    getPackageVersion: (projectPath) => ipcRenderer.invoke('get-package-version', projectPath),
+  bumpPackageVersion: (args) => ipcRenderer.invoke('bump-package-version', args),
+  patchElectronBuilderMac: (args) => ipcRenderer.invoke('patch-electron-builder-mac', args),
+
+      getGitRemote: (projectPath) => ipcRenderer.invoke('get-git-remote', projectPath),
+  updatePackageHomepage: (args) => ipcRenderer.invoke('update-package-homepage', args),
+
+  logError: (args) => ipcRenderer.invoke('log-error', args),
+  commitPushWorkflow: (projectPath) => ipcRenderer.invoke('commit-push-workflow', projectPath),
 
   // Terminal log listener
   onLog: (callback) => {
