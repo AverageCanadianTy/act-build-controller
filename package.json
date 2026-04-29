@@ -1,6 +1,6 @@
 {
   "name": "act-build-controller",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "description": "ACT Build Controller — Matrix Orchestration System",
   "main": "./out/main/index.js",
   "author": "Average Canadian Ty",
@@ -15,12 +15,14 @@
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "npm run build && electron-builder --mac",
-    "build:linux": "npm run build && electron-builder --linux"
+    "build:linux": "npm run build && electron-builder --linux",
+    "build:all": "npm run build && electron-builder --win --linux"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
-    "bcryptjs": "^3.0.3"
+    "bcryptjs": "^3.0.3",
+    "js-yaml": "^4.1.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^2.1.0",
@@ -36,6 +38,7 @@
     "prettier": "^3.7.4",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
-    "vite": "^7.2.6"
+    "vite": "^7.2.6",
+    "js-yaml": "^4.1.1"
   }
 }
