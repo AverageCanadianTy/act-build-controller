@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Engine — User Manual v9.3</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&display=swap');
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161e;
+    --surface2: #1a1e2a;
+    --border: #252a38;
+    --border-accent: #3a4260;
+    --text: #d4d8e8;
+    --text-dim: #7a819a;
+    --text-faint: #3d4255;
+    --gold: #c9a84c;
+    --gold-dim: #6b5422;
+    --teal: #4fc4b8;
+    --teal-dim: #1e4f4a;
+    --rose: #d46a6a;
+    --rose-dim: #4a2020;
+    --violet: #8b7fd4;
+    --violet-dim: #2e2952;
+    --green: #5ebd7a;
+    --green-dim: #1b3d25;
+    --mono: 'DM Mono', monospace;
+    --serif: 'Fraunces', Georgia, serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 14px; line-height: 1.75; min-height: 100vh; }
+
+  .layout { display: grid; grid-template-columns: 256px 1fr; min-height: 100vh; }
+
+  nav {
+    background: var(--surface); border-right: 1px solid var(--border);
+    padding: 2rem 0; position: sticky; top: 0; height: 100vh;
+    overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+  .nav-logo { padding: 0 1.5rem 1.75rem; border-bottom: 1px solid var(--border); margin-bottom: 1.25rem; }
+  .nav-logo .kicker { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); display: block; margin-bottom: 0.3rem; }
+  .nav-logo .title { font-family: var(--serif); font-size: 17px; font-weight: 600; color: var(--gold); line-height: 1.3; }
+  .nav-section-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-faint); padding: 0.5rem 1.5rem 0.2rem; margin-top: 0.4rem; }
+  nav a { display: block; padding: 0.3rem 1.5rem; color: var(--text-dim); text-decoration: none; font-size: 12.5px; transition: color 0.15s, background 0.15s; border-left: 2px solid transparent; }
+  nav a:hover { color: var(--text); background: var(--surface2); border-left-color: var(--gold); }
+
+  main { padding: 3rem 4rem; max-width: 840px; }
+
+  h1 { font-family: var(--serif); font-size: 42px; font-weight: 300; font-style: italic; color: #fff; line-height: 1.1; margin-bottom: 0.5rem; }
+  h2 { font-family: var(--serif); font-size: 26px; font-weight: 600; color: var(--gold); margin: 3.5rem 0 1.25rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--gold-dim); }
+  h3 { font-size: 13px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal); margin: 2rem 0 0.75rem; }
+  h4 { font-size: 13px; font-weight: 500; color: var(--violet); margin: 1.5rem 0 0.5rem; }
+  p { margin-bottom: 1rem; color: var(--text); }
+  a { color: var(--teal); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  ul, ol { margin: 0.5rem 0 1rem 1.5rem; color: var(--text-dim); font-size: 13px; line-height: 2; }
+
+  .hero { background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%); border: 1px solid var(--border-accent); border-radius: 4px; padding: 2.5rem; margin-bottom: 3rem; }
+  .hero .subtitle { color: var(--text-dim); font-size: 13px; margin-top: 0.75rem; margin-bottom: 0; max-width: 600px; line-height: 1.8; }
+  .version-badge { display: inline-block; background: var(--gold-dim); color: var(--gold); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.2rem 0.6rem; border-radius: 2px; margin-top: 1rem; }
+
+  pre { background: #090b10; border: 1px solid var(--border); border-radius: 3px; padding: 1.25rem 1.5rem; overflow-x: auto; margin: 1rem 0 1.5rem; font-size: 12.5px; line-height: 1.7; }
+  code { font-family: var(--mono); font-size: 12px; color: var(--teal); background: var(--surface2); padding: 0.1em 0.4em; border-radius: 2px; }
+  pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
+
+  .kw      { color: var(--violet); }
+  .flag    { color: var(--gold); }
+  .farg    { color: #e8b86d; }
+  .comment { color: var(--text-faint); font-style: italic; }
+  .agent   { color: var(--teal); }
+  .str     { color: var(--green); }
+  .label   { color: var(--rose); }
+
+  .callout { border-left: 3px solid; padding: 1rem 1.25rem; margin: 1.25rem 0; border-radius: 0 3px 3px 0; font-size: 13px; }
+  .callout.tip   { border-color: var(--teal);   background: var(--teal-dim); }
+  .callout.warn  { border-color: var(--gold);   background: var(--gold-dim); }
+  .callout.info  { border-color: var(--violet); background: var(--violet-dim); }
+  .callout.good  { border-color: var(--green);  background: var(--green-dim); }
+  .callout.alert { border-color: var(--rose);   background: var(--rose-dim); }
+  .callout strong { display: block; margin-bottom: 0.35rem; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; }
+  .callout.tip strong   { color: var(--teal); }
+  .callout.warn strong  { color: var(--gold); }
+  .callout.info strong  { color: var(--violet); }
+  .callout.good strong  { color: var(--green); }
+  .callout.alert strong { color: var(--rose); }
+  .callout p { margin: 0; color: var(--text); }
+
+  .roster { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 1rem 0 2rem; }
+  .roster th { text-align: left; padding: 0.5rem 1rem; background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim); font-weight: 500; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .roster td { padding: 0.6rem 1rem; border: 1px solid var(--border); vertical-align: top; line-height: 1.55; }
+  .roster tr:hover td { background: var(--surface2); }
+  .agent-name { font-weight: 500; color: var(--teal); white-space: nowrap; }
+  .flag-name  { font-weight: 500; color: var(--gold); font-family: var(--mono); white-space: nowrap; }
+  .flag-args  { color: #e8b86d; font-size: 11.5px; display: block; margin-top: 0.15rem; }
+
+  .anatomy { background: #090b10; border: 1px solid var(--border); border-radius: 3px; padding: 1.5rem; font-size: 13px; line-height: 2.3; margin: 1rem 0 1.25rem; }
+  .anatomy .line { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.1rem; }
+  .anatomy .chunk { padding: 0.1em 0.5em; border-radius: 2px; white-space: nowrap; }
+  .anatomy .ann { font-size: 11px; color: var(--text-faint); margin-left: auto; white-space: nowrap; padding-left: 0.75rem; }
+  .c-boot  { background: rgba(201,168,76,0.15);  color: var(--gold);   border: 1px solid var(--gold-dim); }
+  .c-flag  { background: rgba(139,127,212,0.15); color: var(--violet); border: 1px solid var(--violet-dim); }
+  .c-farg  { background: rgba(232,184,109,0.12); color: #e8b86d;       border: 1px solid rgba(232,184,109,0.3); }
+  .c-topic { background: rgba(79,196,184,0.12);  color: var(--teal);   border: 1px solid var(--teal-dim); }
+  .c-prompt{ background: rgba(94,189,122,0.12);  color: var(--green);  border: 1px solid var(--green-dim); }
+  .c-agent { background: rgba(212,106,106,0.12); color: var(--rose);   border: 1px solid var(--rose-dim); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 0.75rem 0 1.5rem; }
+  .legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 11px; color: var(--text-dim); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; margin: 1rem 0 1.5rem; }
+  .mode-cell { background: var(--surface); padding: 1.25rem; }
+  .mode-cell .mode-name { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 500; margin-bottom: 0.6rem; }
+  .mode-cold .mode-name { color: var(--teal); }
+  .mode-hot .mode-name  { color: var(--rose); }
+  .mode-cell p { font-size: 12.5px; color: var(--text-dim); margin: 0; }
+
+  .state-strip { display: flex; gap: 0; margin: 1rem 0 1.75rem; border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+  .state-node { flex: 1; padding: 0.75rem 0.5rem; background: var(--surface); border-right: 1px solid var(--border); text-align: center; }
+  .state-node:last-child { border-right: none; }
+  .state-node .sn-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-faint); display: block; margin-bottom: 0.2rem; }
+  .state-node .sn-name  { font-size: 11.5px; color: var(--text-dim); line-height: 1.3; }
+  .state-node.active { background: var(--surface2); }
+  .state-node.active .sn-name { color: var(--gold); }
+
+  .example-card { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; margin: 1.5rem 0; overflow: hidden; }
+  .example-card .card-header { background: var(--surface2); border-bottom: 1px solid var(--border); padding: 0.6rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+  .example-card .card-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); }
+  .example-card .card-tag { font-size: 10px; padding: 0.1rem 0.5rem; border-radius: 10px; background: var(--gold-dim); color: var(--gold); margin-left: auto; }
+  .example-card .card-tag.multi { background: var(--violet-dim); color: var(--violet); }
+  .example-card pre { margin: 0; border: none; border-radius: 0; background: transparent; padding: 1.25rem 1.5rem; }
+  .example-card .card-explanation { border-top: 1px solid var(--border); padding: 0.9rem 1.25rem; font-size: 12.5px; color: var(--text-dim); line-height: 1.65; }
+
+  .trigger-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; margin: 1rem 0 1.5rem; }
+  .trigger-cell { background: var(--surface); padding: 1rem 1.1rem; }
+  .trigger-cell .tc-name { font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.4rem; }
+  .tc-harmonic .tc-name  { color: var(--teal); }
+  .tc-hegelian .tc-name  { color: var(--rose); }
+  .tc-orthogonal .tc-name{ color: var(--violet); }
+  .trigger-cell p { font-size: 12px; color: var(--text-dim); margin: 0; line-height: 1.55; }
+
+  .adr-block { background: #090b10; border: 1px solid var(--border-accent); border-radius: 3px; padding: 1.25rem 1.5rem; margin: 1rem 0 1.5rem; font-size: 12.5px; line-height: 1.8; }
+  .adr-block .adr-title { font-family: var(--serif); color: var(--gold); font-size: 14px; font-weight: 600; margin-bottom: 0.75rem; display: block; }
+  .adr-row { display: flex; gap: 0.5rem; margin-bottom: 0.35rem; }
+  .adr-key { color: var(--text-dim); min-width: 180px; flex-shrink: 0; }
+  .adr-val { color: var(--text); }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 2.5rem 0; }
+  .section-num { font-size: 11px; color: var(--text-faint); letter-spacing: 0.1em; display: block; margin-bottom: -1rem; margin-top: 3rem; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav>
+  <div class="nav-logo">
+    <span class="kicker">v9.3 · Full Manifold · Manual</span>
+    <div class="title">Unified Agent<br>Engine Guide</div>
+  </div>
+  <div class="nav-section-label">Getting Started</div>
+  <a href="#overview">What Is This System?</a>
+  <a href="#mental-model">The Mental Model</a>
+  <a href="#state-machine">The State Machine (T0–T4)</a>
+  <a href="#boot">Booting the Engine</a>
+  <div class="nav-section-label">Syntax Reference</div>
+  <a href="#anatomy">Prompt Anatomy</a>
+  <a href="#two-syntaxes">Two Syntaxes Explained</a>
+  <a href="#flags">Flags & Modifiers</a>
+  <a href="#multiflags">Using Multiple Flags</a>
+  <a href="#agents">The Agent Roster</a>
+  <div class="nav-section-label">How It Works</div>
+  <a href="#routing">How Agents Are Selected</a>
+  <a href="#modes">Cold vs Hot Mode</a>
+  <a href="#triggers">The Three HOT Triggers</a>
+  <a href="#adr">The ADR Output (T4)</a>
+  <div class="nav-section-label">Example Prompts</div>
+  <a href="#ex-code">Software Development</a>
+  <a href="#ex-writing">Writing & Narrative</a>
+  <a href="#ex-research">Research & Analysis</a>
+  <a href="#ex-business">Business & Strategy</a>
+  <a href="#ex-philosophy">Philosophy & Ethics</a>
+  <a href="#ex-multiflags">Multi-Flag Examples</a>
+  <div class="nav-section-label">Reference</div>
+  <a href="#troubleshooting">Troubleshooting</a>
+  <a href="#cheatsheet">Quick Cheat Sheet</a>
+</nav>
+
+<div>
+<main>
+
+<div class="hero">
+  <h1>The Agent Engine<br>User Manual</h1>
+  <p class="subtitle">A plain-language guide to writing prompts that unlock the full capability of the Unified Epistemic &amp; Temporal Matrix — a structured multi-agent reasoning system that routes your questions to the right expert minds automatically.</p>
+  <span class="version-badge">Kernel v9.3.0-full-manifold</span>
+</div>
+
+<!-- 01 -->
+<span class="section-num">01</span>
+<h2 id="overview">What Is This System?</h2>
+<p>Think of the Agent Engine as a <strong>committee of specialists</strong> that sits behind every prompt you write. Instead of one general-purpose thinker handling your question, the system automatically figures out which expert — or combination of experts — is best suited to answer it, and routes your request accordingly.</p>
+<p>The engine has seventeen named agents, each with a distinct area of mastery. You do not need to manually call on them. The system reads your prompt, measures how closely it aligns with each agent's expertise, and assembles the right team for the job.</p>
+<div class="callout tip">
+  <strong>The one thing to remember</strong>
+  <p>You write the prompt. The engine handles orchestration. Your job is to give it a clear signal — a well-structured prompt with the right boot command — and get out of the way.</p>
+</div>
+<p>The engine is not limited to software or technical tasks. Agents span code, mathematics, law, philosophy, psychology, history, business, and aesthetics. A question about the ethics of a business decision will pull in very different agents than a question about debugging a React component — but the prompt syntax is identical.</p>
+
+<!-- 02 -->
+<span class="section-num">02</span>
+<h2 id="mental-model">The Mental Model</h2>
+<p>Before diving into syntax, it helps to understand what the engine is actually doing when it reads your prompt. Four core mechanisms work together:</p>
+<h3>1. Alignment Scoring (EML)</h3>
+<p>The engine converts your prompt into a position in concept-space and measures the conceptual distance between it and each agent's expertise. The closer the match, the more likely that agent gets activated. Clear, specific prompts produce sharper positions and better routing.</p>
+<h3>2. Existence Check (NAND Gate)</h3>
+<p>Before any agent acts, the engine verifies that the domain you're asking about is coherent and non-contradictory. If your prompt contains logically incompatible requirements, the engine flags the contradiction rather than silently proceeding on bad assumptions.</p>
+<h3>3. Routing & Conflict Detection (Topology Engine)</h3>
+<p>Domains can overlap. The topology engine detects these overlaps and either blends agent outputs harmonically (when they agree) or explicitly surfaces the tension for synthesis (when they don't). It operates through three distinct triggers depending on the type of tension detected.</p>
+<h3>4. The Orchestrator (Amos)</h3>
+<p>Amos is the master coordinator. All agent outputs pass through Amos, who reconciles them into a unified response and produces the final Committee ADR — the structured record of what was decided, which constraints were applied, and what risks remain.</p>
+<div class="callout info">
+  <strong>On Compression</strong>
+  <p>Internally, all engine state transitions are expressed as mathematical operators — not natural language. The system treats internal prose-reasoning as high-entropy noise and forces all transitions to collapse into logic traces. This is what keeps the engine precise rather than fluent-but-vague.</p>
+</div>
+
+<!-- 03 -->
+<span class="section-num">03</span>
+<h2 id="state-machine">The State Machine (T0–T4)</h2>
+<p>The engine runs through five sequential states for every session. Understanding them helps you know where your prompt is being processed at any given moment.</p>
+<div class="state-strip">
+  <div class="state-node"><span class="sn-label">T0</span><span class="sn-name">Matrix<br>Ingestion</span></div>
+  <div class="state-node"><span class="sn-label">T1</span><span class="sn-name">Bootloader &amp;<br>Agent Allocation</span></div>
+  <div class="state-node"><span class="sn-label">T2</span><span class="sn-name">Triangulation &amp;<br>Routing</span></div>
+  <div class="state-node"><span class="sn-label">T3</span><span class="sn-name">Physical<br>Injection</span></div>
+  <div class="state-node active"><span class="sn-label">T4</span><span class="sn-name">Committee<br>ADR Output</span></div>
+</div>
+<h4>T0 — Matrix Ingestion</h4>
+<p>The engine receives any architecture files, context documents, or project files you've attached. It parses all dependency graphs and domain structures before anything else happens. This is why attaching relevant files at the start of a session meaningfully improves agent allocation.</p>
+<h4>T1 — Bootloader & Agent Allocation</h4>
+<p>Your <code>/INIT_KERNEL</code> command fires here. CLI flags are read, and the engine performs its bipartite matching — measuring the alignment between every agent's capability vector and every domain centroid detected in T0. Agents are assigned to domains before your prompt is even fully evaluated.</p>
+<h4>T2 — Delta Triangulation & Thermodynamic Routing</h4>
+<p>Your prompt is evaluated for friction. The engine enters either Cold Mode (proceed silently) or Hot Mode (surface the tension, state the strategy, wait for confirmation). The three HOT triggers — Harmonic Resonance, Hegelian Dialectic, and Orthogonal Injection — are evaluated here.</p>
+<h4>T3 — Physical Injection</h4>
+<p>Validated outputs are executed through the router. Contradiction checks run. Agents mutate the output stream strictly within their hard constraints.</p>
+<h4>T4 — Committee ADR</h4>
+<p>The session closes with a structured Architecture Decision Record: what was concluded, which agent constraints were applied, and what risks were identified. See <a href="#adr">the ADR section</a> for details.</p>
+
+<!-- 04 -->
+<span class="section-num">04</span>
+<h2 id="boot">Booting the Engine</h2>
+<p>Every session that uses the full engine capability begins with a boot command. This signals to the system that you want structured multi-agent routing rather than a simple single-pass response.</p>
+<pre><code><span class="kw">/INIT_KERNEL</span> <span class="flag">[--flags]</span>
+<span class="label">topic:</span> <span class="str">[brief statement of the domain or project]</span>
+---
+<span class="label">#PROMPT</span>
+<span class="str">[Your actual question or request]</span></code></pre>
+<p>The <code>/INIT_KERNEL</code> command activates the orchestrator. Everything below the <code>---</code> separator is your prompt content. The <code>topic:</code> line gives the engine a macro-level domain signal before it reads your question — this primes agent allocation before T2 begins.</p>
+<div class="callout warn">
+  <strong>Topic line matters</strong>
+  <p>The <code>topic:</code> field acts as a coarse filter that pre-weights agent allocation before the prompt is processed. A topic of <code>tax law</code> will weight Silas and Isaac before the routing engine even reads your question. Take one second to fill it in accurately.</p>
+</div>
+
+<!-- 05 -->
+<span class="section-num">05</span>
+<h2 id="anatomy">Prompt Anatomy</h2>
+<p>Here is the full structure of a prompt using multiple inline flag arguments — the most explicit form of the syntax:</p>
+<div class="anatomy">
+  <div class="line">
+    <span class="chunk c-boot">/INIT_KERNEL</span>
+    <span class="chunk c-flag">--orthogonal</span>
+    <span class="chunk c-farg">[Mather, Bane]</span>
+    <span class="chunk c-flag">--hegelian</span>
+    <span class="chunk c-farg">[Isaac, Aristotle, Silas]</span>
+    <span class="ann">← boot command + chained flags with inline agent args</span>
+  </div>
+  <div class="line">
+    <span class="chunk c-topic">topic: organizational ethics &amp; finance</span>
+    <span class="ann">← domain primer (runs at T1)</span>
+  </div>
+  <div class="line">
+    <span style="color:var(--border-accent);font-size:16px">---</span>
+    <span class="ann">← separator (required)</span>
+  </div>
+  <div class="line">
+    <span class="chunk c-agent">#PROMPT</span>
+    <span class="ann">← section header</span>
+  </div>
+  <div class="line">
+    <span class="chunk c-prompt">Your detailed question or request goes here.</span>
+    <span class="ann">← prompt content (evaluated at T2)</span>
+  </div>
+  <div class="line">
+    <span class="chunk c-agent">@Ludwig</span>
+    <span class="ann">← soft-weight additional agents via @tag</span>
+  </div>
+</div>
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--gold)"></div>Boot command</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--violet)"></div>Flags</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#e8b86d"></div>Flag agent args</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--teal)"></div>Topic primer</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Prompt content</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--rose)"></div>@Agent tags</div>
+</div>
+
+<!-- 06 -->
+<span class="section-num">06</span>
+<h2 id="two-syntaxes">Two Syntaxes — and How to Use Both</h2>
+<p>There are two ways to direct agents in a prompt. They work differently, and understanding the distinction lets you use them together intentionally.</p>
+
+<h3>Syntax A — Inline Flag Arguments</h3>
+<p>Certain flags (<code>--hegelian</code>, <code>--harmonic</code>, <code>--orthogonal</code>) accept agent names as arguments directly on the boot line. This is a <strong>hard assignment</strong> — the engine is forced to run the named protocol with exactly those agents, bypassing the autonomous alignment scoring entirely for that protocol.</p>
+<pre><code><span class="kw">/INIT_KERNEL</span> <span class="flag">--hegelian</span> <span class="farg">[Isaac, Aristotle, Silas]</span>
+<span class="comment">// Forces: Isaac (thesis) vs Aristotle (antithesis), Silas anchors synthesis</span>
+
+<span class="kw">/INIT_KERNEL</span> <span class="flag">--orthogonal</span> <span class="farg">[Pascal, Mather]</span>
+<span class="comment">// Forces: Pascal builds; output must satisfy Mather's Logical_Soundness constraint</span>
+
+<span class="kw">/INIT_KERNEL</span> <span class="flag">--harmonic</span> <span class="farg">[Cael, Omnia, Bane]</span>
+<span class="comment">// Forces: Cael + Omnia fuse voices, Bane stabilizes the harmonic output</span></code></pre>
+<div class="callout alert">
+  <strong>Flag arguments override routing for that protocol</strong>
+  <p>When you specify agents inline on a flag, the engine does not perform alignment scoring for that protocol. You are taking full manual control. Use this when you know exactly which perspectives you want in tension — and are confident the prompt supports it.</p>
+</div>
+
+<h3>Syntax B — @Agent Tags in the Prompt Body</h3>
+<p>Placing <code>@AgentName</code> anywhere in your prompt body <strong>adds weight</strong> to those agents within the normal routing calculation. It does not override the alignment system — it nudges it. The engine still runs its scoring, but tagged agents get a thumb on the scale.</p>
+<pre><code><span class="kw">/INIT_KERNEL</span>
+<span class="label">topic:</span> <span class="str">distributed systems</span>
+---
+<span class="label">#PROMPT</span>
+<span class="str">Design the failover architecture for a multi-region deployment.</span>
+
+<span class="agent">@Serge @Pascal @Ezekiel</span>
+<span class="comment">// These agents are weighted upward; routing still validates them against the domain</span></code></pre>
+
+<h3>Combining Both</h3>
+<p>The two syntaxes are not mutually exclusive. You can use inline flag arguments to hard-assign a dialectic or fusion protocol, and then use <code>@</code> tags to soft-weight additional agents into the surrounding context. The flag-specified agents handle the structured protocol; the tagged agents contribute to the broader output.</p>
+<pre><code><span class="kw">/INIT_KERNEL</span> <span class="flag">--hegelian</span> <span class="farg">[Isaac, Aristotle]</span>
+<span class="label">topic:</span> <span class="str">executive compensation</span>
+---
+<span class="label">#PROMPT</span>
+<span class="str">A CEO is proposing a compensation package that maximizes
+short-term shareholder return at the expense of employee
+wage growth. Produce a synthesis that doesn't pretend these
+interests are reconcilable without real cost to one side.</span>
+
+<span class="agent">@Silas @Margaret</span>
+<span class="comment">// Silas adds legal/revenue context; Margaret adds historical precedent
+// Isaac vs Aristotle runs the hard dialectic on top of this richer context</span></code></pre>
+<div class="callout tip">
+  <strong>Rule of thumb</strong>
+  <p>Use inline flag arguments when you want to <em>force</em> a specific intellectual structure. Use <code>@</code> tags when you want to <em>enrich</em> context without mandating a protocol. When in doubt, <code>@</code> tags are the safer default — they never override, they only inform.</p>
+</div>
+
+<!-- 07 -->
+<span class="section-num">07</span>
+<h2 id="flags">Flags & Modifiers</h2>
+<p>Flags go immediately after <code>/INIT_KERNEL</code>. Multiple flags can be chained on the same line. Each changes how the engine processes your prompt at a system level.</p>
+
+<table class="roster">
+  <thead><tr><th>Flag</th><th>What It Does</th><th>When to Use It</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><span class="flag-name">--genesis</span></td>
+      <td>Maximizes generative output. Signals a full build from scratch rather than analysis or refinement. Activates maximum agent scope. No agent arguments.</td>
+      <td>Creating something entirely new — a framework, architecture, document, or system from zero.</td>
+    </tr>
+    <tr>
+      <td><span class="flag-name">--strict</span></td>
+      <td>Forces immediate Cold Path. Collapses friction to zero. No dialectic, no synthesis overhead, no Hot Mode pause. Output is lean and direct. No agent arguments.</td>
+      <td>Well-scoped questions with clear answers where you want speed, not deliberation.</td>
+    </tr>
+    <tr>
+      <td>
+        <span class="flag-name">--hegelian</span>
+        <span class="flag-args">[A1, A2, (A3)]</span>
+      </td>
+      <td>Forces adversarial synthesis between A1 (thesis) and A2 (antithesis). A3 is optional — acts as synthesis anchor, holding the third position stable. Bypasses alignment scoring for these agents.</td>
+      <td>Genuine competing answers where you want the tension resolved, not one side picked. Ethical dilemmas, design tradeoffs, policy conflicts.</td>
+    </tr>
+    <tr>
+      <td>
+        <span class="flag-name">--harmonic</span>
+        <span class="flag-args">[A1, A2, (A3)] — or no args</span>
+      </td>
+      <td>With args: forces resonance fusion between A1 and A2 — they blend rather than compete. A3 stabilizes. Without args: global override, forces Hegelian synthesis across all active domains simultaneously.</td>
+      <td>With args: two perspectives that should reinforce each other. Without args: big-picture cross-domain synthesis where everything should integrate.</td>
+    </tr>
+    <tr>
+      <td>
+        <span class="flag-name">--orthogonal</span>
+        <span class="flag-args">[A1, A2]</span>
+      </td>
+      <td>Forces A1 (the builder) to operate strictly under A2's hard constraint. A1's output must satisfy A2's absolute rule or be rejected. Exactly two agents — no third argument.</td>
+      <td>When you need a domain expert to work within a constraint that isn't naturally theirs. Creative under legal constraint. Architect under mathematical proof requirement.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout info">
+  <strong>On --harmonic with and without arguments</strong>
+  <p><code>--harmonic</code> is the one flag that behaves differently depending on whether you pass agent args. With <code>[A1, A2]</code> it's a targeted resonance fusion of two specific agents. Without arguments it's a global override that forces Hegelian synthesis across every active domain simultaneously — a much broader, more philosophical operation. Don't use the no-arg form for scoped questions.</p>
+</div>
+
+<!-- 08 -->
+<span class="section-num">08</span>
+<h2 id="multiflags">Using Multiple Flags</h2>
+<p>Flags are chained on the same boot line, separated by spaces. Each flag is evaluated independently and Amos resolves any interactions between them before T2 runs.</p>
+
+<pre><code><span class="kw">/INIT_KERNEL</span> <span class="flag">--orthogonal</span> <span class="farg">[Cael, Mather]</span> <span class="flag">--hegelian</span> <span class="farg">[Isaac, Aristotle, Silas]</span>
+<span class="comment">// Two simultaneous protocols running in parallel:
+// 1. Cael (UI builder) must satisfy Mather's Logical_Soundness constraint
+// 2. Isaac vs Aristotle in dialectic, Silas anchors the synthesis</span></code></pre>
+
+<pre><code><span class="kw">/INIT_KERNEL</span> <span class="flag">--genesis</span> <span class="flag">--harmonic</span> <span class="farg">[Omnia, Bane, Cael]</span>
+<span class="comment">// Full build from zero (genesis) AND
+// Omnia + Bane fuse into a single voice, Cael stabilizes the UX layer</span></code></pre>
+
+<pre><code><span class="kw">/INIT_KERNEL</span> <span class="flag">--genesis</span> <span class="flag">--hegelian</span> <span class="farg">[Serge, Pascal]</span> <span class="flag">--orthogonal</span> <span class="farg">[Cael, Mather]</span>
+<span class="comment">// Three simultaneous protocols:
+// Genesis: full architectural generation from zero
+// Serge vs Pascal in dialectic (system architecture vs backend data model)
+// Cael's frontend work must satisfy Mather's logical constraints independently</span></code></pre>
+
+<div class="callout warn">
+  <strong>One conflict to avoid</strong>
+  <p><code>--strict</code> and <code>--genesis</code> directly conflict — strict collapses all friction to zero while genesis maximizes it. Do not chain them. All other flag combinations are valid. When the same agent appears in multiple protocol roles, Amos resolves priority: dialectic role governs primary output, orthogonal constraint gates that output, harmonic fusion applies to the remaining context.</p>
+</div>
+
+<!-- 09 -->
+<span class="section-num">09</span>
+<h2 id="agents">The Agent Roster</h2>
+<p>You do not need to memorize this list. It exists so you can make informed decisions when using inline flag arguments or <code>@</code> tags. The "hard constraint" column is especially important for <code>--orthogonal</code> use — that constraint is what gets imposed on the builder agent.</p>
+
+<h3>Engineering & Code</h3>
+<table class="roster">
+  <thead><tr><th>Agent</th><th>Expertise</th><th>Hard Constraint (C_A)</th></tr></thead>
+  <tbody>
+    <tr><td class="agent-name">Cael</td><td>UI, React, client-side state, user experience</td><td>DOM_Integrity</td></tr>
+    <tr><td class="agent-name">Pascal</td><td>SQL, Node.js, data pipelines, APIs</td><td>ACID_Compliance</td></tr>
+    <tr><td class="agent-name">Serge</td><td>System architecture, OS environments, inter-process communication, scaling</td><td>Cross_Matrix_Sync</td></tr>
+    <tr><td class="agent-name">Bernini</td><td>Structural design, spatial mechanics, statics, material science</td><td>Structural_Load</td></tr>
+  </tbody>
+</table>
+
+<h3>Data, Logic & Science</h3>
+<table class="roster">
+  <thead><tr><th>Agent</th><th>Expertise</th><th>Hard Constraint (C_A)</th></tr></thead>
+  <tbody>
+    <tr><td class="agent-name">Mather</td><td>Topology, formal proofs, mathematics, engine logic</td><td>Logical_Soundness</td></tr>
+    <tr><td class="agent-name">Ezekiel</td><td>Cybernetics, digital signal processing, measurement systems, metrology</td><td>Signal_Fidelity</td></tr>
+    <tr><td class="agent-name">Galileo</td><td>Astrophysics, pure science, empirical inquiry</td><td>Empirical_Observation</td></tr>
+  </tbody>
+</table>
+
+<h3>Human, Aesthetic & Commercial</h3>
+<table class="roster">
+  <thead><tr><th>Agent</th><th>Expertise</th><th>Hard Constraint (C_A)</th></tr></thead>
+  <tbody>
+    <tr><td class="agent-name">Omnia</td><td>CSS, typography, visual cognition, interface aesthetics</td><td>Visual_Hierarchy</td></tr>
+    <tr><td class="agent-name">Bane</td><td>Psychology, public relations, narrative, persuasion</td><td>Ethical_Alignment</td></tr>
+    <tr><td class="agent-name">Silas</td><td>IP law, open-source licensing (AGPL etc.), revenue operations</td><td>License_Sovereignty</td></tr>
+    <tr><td class="agent-name">Dmitri</td><td>Industrial-organizational psychology, labor economics</td><td>Objective_Metrics</td></tr>
+    <tr><td class="agent-name">Isaac</td><td>Accounting, fiduciary responsibility, ROI analysis</td><td>Resource_Balance</td></tr>
+  </tbody>
+</table>
+
+<h3>Philosophy, Logic & Structure</h3>
+<table class="roster">
+  <thead><tr><th>Agent</th><th>Expertise</th><th>Hard Constraint (C_A)</th></tr></thead>
+  <tbody>
+    <tr><td class="agent-name">Ludwig</td><td>Semantics, ontology, meaning and language games</td><td>Definitional_Clarity</td></tr>
+    <tr><td class="agent-name">Aristotle</td><td>Ethics, teleology, foundational logic</td><td>Axiomatic_Purity</td></tr>
+    <tr><td class="agent-name">Spinoza</td><td>Taxonomy, categories of being, structural classification</td><td>Structural_Necessity</td></tr>
+    <tr><td class="agent-name">Onesimus</td><td>Teleology, first cause, metaphysics</td><td>Ontological_Truth</td></tr>
+    <tr><td class="agent-name">Margaret</td><td>Historiography, temporal precedent, historical context</td><td>Chronological_Accuracy</td></tr>
+  </tbody>
+</table>
+
+<!-- 10 -->
+<span class="section-num">10</span>
+<h2 id="routing">How Agents Are Selected</h2>
+<p>When no flags override it, the routing system works in three phases automatically:</p>
+<h4>Phase 1 — Domain Centroid Evaluation</h4>
+<p>The engine maps your prompt against every domain in its universe and eliminates any domain that falls outside the scope of your question. This is a fast coarse filter. If your prompt is about contract law, engineering agents are removed from consideration before any detailed analysis begins.</p>
+<h4>Phase 2 — Contradiction Check (Z₂ Involution)</h4>
+<p>The engine checks whether your prompt contains self-contradicting requirements. If you've asked for something logically incompatible with something else you've specified, the engine flags it rather than silently producing a confused answer. If a schema exists that does the exact opposite of your prompt, that's a fatal contradiction — the engine halts and surfaces it.</p>
+<h4>Phase 3 — Fine-Grained Alignment & Threshold</h4>
+<p>For each agent in the surviving domains, the engine scores alignment on a 0–1 scale. Two thresholds govern the outcome:</p>
+<ul>
+  <li><strong style="color:var(--teal)">Score ≥ 0.90 (Hard Merge):</strong> Agent is a near-perfect fit. Fast-tracked directly into the output stream.</li>
+  <li><strong style="color:var(--gold)">0.65 ≤ Score &lt; 0.90 (Soft Merge):</strong> Agent is relevant but has tension with other agents. Synthesis is required before output.</li>
+  <li><strong style="color:var(--rose)">Score &lt; 0.65:</strong> Agent is excluded. Not relevant enough to contribute.</li>
+</ul>
+
+<!-- 11 -->
+<span class="section-num">11</span>
+<h2 id="modes">Cold vs Hot Mode</h2>
+<p>After routing, the engine enters one of two execution modes based on the friction it detects between your prompt and the active agents' capabilities.</p>
+<div class="mode-grid">
+  <div class="mode-cell mode-cold">
+    <div class="mode-name">❄ Cold Mode</div>
+    <p>Low friction. Your prompt aligns cleanly with agent capabilities. The engine proceeds silently and directly to output. No pausing, no deliberation surfaced.</p>
+  </div>
+  <div class="mode-cell mode-hot">
+    <div class="mode-name">🔥 Hot Mode</div>
+    <p>Meaningful friction detected. The engine announces which agents are active, which protocol triggered, and waits for your confirmation. Not a failure — it means the engine caught something real.</p>
+  </div>
+</div>
+<div class="callout good">
+  <strong>What a Hot Mode announcement looks like</strong>
+  <p><em>"Amos: (Friction 0.71 detected. Delta Gate [Δ] engaged. Applying protocol: Hegelian_Dialectic. Summoning: Isaac, Aristotle, Silas.)"</em> — Respond "proceed" to continue, or adjust your prompt. If you want to suppress this entirely, use <code>--strict</code>.</p>
+</div>
+
+<!-- 12 -->
+<span class="section-num">12</span>
+<h2 id="triggers">The Three HOT Mode Triggers</h2>
+<p>When the engine enters Hot Mode, exactly one of three protocols fires — depending on the shape of the tension it detected. Each can also be forced manually using the corresponding flag.</p>
+<div class="trigger-grid">
+  <div class="trigger-cell tc-harmonic">
+    <div class="tc-name">Harmonic Resonance</div>
+    <p>Multiple agents are equidistant from the prompt — they all fit equally well. The engine fuses them rather than choosing one. Output blends their perspectives into a single unified voice.</p>
+  </div>
+  <div class="trigger-cell tc-hegelian">
+    <div class="tc-name">Hegelian Dialectic</div>
+    <p>Two agents are in polar opposition — their outputs directly contradict. Rather than picking one, the engine produces a genuine synthesis: a third position that resolves the contradiction at a higher level.</p>
+  </div>
+  <div class="trigger-cell tc-orthogonal">
+    <div class="tc-name">Orthogonal Injection</div>
+    <p>An agent's perspective is genuinely off-axis — adjacent to the problem without directly addressing it. Injected as a clearly labelled separate track that doesn't contaminate the primary output.</p>
+  </div>
+</div>
+<div class="callout info">
+  <strong>Why Hegelian and not just "compromise"</strong>
+  <p>Averaging two opposed positions produces a weaker version of both. The Hegelian approach treats the contradiction as productive: the thesis and antithesis generate a synthesis that neither agent could reach alone. This is structurally distinct from splitting the difference.</p>
+</div>
+
+<!-- 13 -->
+<span class="section-num">13</span>
+<h2 id="adr">The ADR Output (T4)</h2>
+<p>Every session closes at T4 with a Committee Architecture Decision Record. This is Amos's formal closing statement — a structured summary of what the committee concluded, which constraints governed the output, and what risks remain unresolved.</p>
+<div class="adr-block">
+  <span class="adr-title">Committee ADR (Architecture Decision Record)</span>
+  <div class="adr-row"><span class="adr-key">Consensus Reached:</span><span class="adr-val">[The strictly evaluated outcome — what was decided]</span></div>
+  <div class="adr-row"><span class="adr-key">Constraints Applied:</span><span class="adr-val">[ACTIVE_AGENT]: [Which hard constraint governed their output]</span></div>
+  <div class="adr-row"><span class="adr-key">Tech Debt / Risks:</span><span class="adr-val">[Topological vulnerabilities — what couldn't be fully synthesized]</span></div>
+</div>
+<p>The ADR is most useful when you're making decisions with downstream consequences — architecture choices, policy decisions, ethical judgements. The risks field surfaces what the engine couldn't cleanly resolve, which is often the most valuable part of the output.</p>
+<div class="callout tip">
+  <strong>Read the risks field first</strong>
+  <p>The consensus field tells you what the engine concluded. The risks field tells you what it wasn't sure about. For high-stakes decisions, the risks field often contains the more important information.</p>
+</div>
+
+<!-- EXAMPLES -->
+<hr class="divider">
+<span class="section-num">14</span>
+<h2>Example Prompts</h2>
+<p>The following examples are copy-ready. Each includes a note on what the engine will do with it and why the syntax was written that way.</p>
+
+<h3 id="ex-code">Software Development</h3>
+
+<div class="example-card">
+  <div class="card-header">
+    <span class="card-label">Example 1.1 — Standard routing</span>
+    <span class="card-tag">Cael · Pascal · Serge</span>
+  </div>
+<pre><code><span class="kw">/INIT_KERNEL</span>
+<span class="label">topic:</span> <span class="str">full-stack real-time architecture</span>
+---
+<span class="label">#PROMPT</span>
+<span class="str">I'm building a real-time collaborative document editor.
+Users should see each other's cursors and edits live.
+What is the right architecture for this, and what failure
+modes should I design for from the start?</span></code></pre>
+  <div class="card-explanation">No flags needed. The routing engine will assign Serge (architecture), Pascal (data/API layer), and Cael (client state) autonomously. Because their domains overlap on real-time state synchronization, a synthesized response will coordinate all three.</div>
+</div>
+
+<div class="example-card">
+  <div class="card-header">
+    <span class="card-label">Example 1.2 — Genesis + orthogonal constraint</span>
+    <span class="card-tag multi">--genesis · --orthogonal</span>
+  </div>
+<pre><code><span class="kw">/INIT_KERNEL</span> <span class="flag">--genesis</span> <span class="flag">--orthogonal</span> <span class="farg">[Cael, Mather]</span>
+<span class="label">topic:</span> <span class="str">design system</span>
+---
+<span class="label">#PROMPT</span>
+<span class="str">Build a complete design token system for a dark-mode-first
+healthcare dashboard: color roles, typography scale, spacing
+system, and component states. Clinical precision without
+feeling cold. Every token decision must be structurally
+justified — not aesthetic whim.
+
+@Omnia</span></code></pre>
+  <div class="card-explanation">--genesis: full build from zero. --orthogonal [Cael, Mather] forces Cael's UI architecture to satisfy Mather's Logical_Soundness constraint — every decision needs a structural reason. @Omnia adds visual cognition weight without assigning Omnia a protocol role.</div>
+</div>
+
+<h3 id="ex-writing">Writing & Narrative</h3>
+
+<div class="example-card">
+  <div class="card-header">
+    <span class="card-label">Example 2.1 — Harmonic fusion</span>
+    <span class="card-tag multi">--harmonic [A1, A2, A3]</span>
+  </div>
+<pre><code><span class="kw">/INIT_KERNEL</span> <span class="flag">--harmonic</span> <span class="farg">[Bane, Ludwig, Omnia]</span>
+<span class="label">topic:</span> <span class="str">brand manifesto</span>
+---
+<span class="label">#PROMPT</span>
+<span class="str">Write a brand manifesto for a company that makes premium
+tools for craftspeople — tradition and precision engineering.
+
+Not a list of values. A narrative that a craftsperson
+would read and feel genuinely seen by.</span></code></pre>
+  <div class="card-explanation">--harmonic [Bane, Ludwig, Omnia] fuses all three into a single unified voice. Bane contributes emotional resonance and narrative structure. Ludwig ensures the language means exactly what it claims (no drift or puffery). Omnia shapes the register and visual rhythm of the prose. The output reads as one cohesive piece, not three perspectives stapled together.</div>
+</div>
+
+<div class="example-card">
+  <div class="card-header">
+    <span class="card-label">Example 2.2 — Genesis + hegelian</span>
+    <span class="card-tag multi">--genesis · --hegelian</span>
+  </div>
+<pre><code><span class="kw">/INIT_KERNEL</span> <span class="flag">--genesis</span> <span class="flag">--hegelian</span> <span class="farg">[Bane, Margaret, Aristotle]</span>
+<span class="label">topic:</span> <span class="str">long-form essay</span>
+---
+<span class="label">#PROMPT</span>
+<span class="str">Write an essay arguing that contemporary attention economies
+are structurally identical to historical models of indentured
+servitude, and examine what a genuine emancipation framework
+would look like in that context.</span></code></pre>
+  <div class="card-explanation">--genesis: full essay build from zero. --hegelian [Bane, Margaret, Aristotle]: Bane (persuasive narrative) is the thesis, Margaret (historical precedent and empirical grounding) is the antithesis that tests the claim, Aristotle anchors the ethical synthesis. The three-argument structure maps directly onto classical essay form.</div>
+</div>
+
+<h3 id="ex-research">Research & Analysis</h3>
+
+<div class="example-card">
+  <div class="card-header">
+    <span class="card-label">Example 3.1 — Strict mode (fast answer)</span>
+    <span class="card-tag multi">--strict</span>
+  </div>
+<pre><code><span class="kw">/INIT_KERNEL</span> <span class="flag">--strict</span>
+<span class="label">topic:</span> <span class="str">climate physics</span>
+---
+<span class="label">#PROMPT</span>
+<span class="str">What is the mathematical relationship between atmospheric
+CO2 concentration and radiative forcing? Include the
+logarithmic relationship and why it matters for climate
+sensitivity estimates.
+
+@Galileo @Mather @Ezekiel</span></code></pre>
+  <div class="card-explanation">--strict forces Cold Path — no dialectic overhead, no Hot Mode pause. This is a well-scoped question with a correct answer. @tags weight Galileo (empirical physics), Mather (mathematical formalism), and Ezekiel (measurement/instrument uncertainty) without triggering any protocol. Fast and precise.</div>
+</div>
+
+<h3 id="ex-business">Business & Strategy</h3>
+
+<div class="example-card">
+  <div class="card-header">
+    <span class="card-label">Example 4.1 — Genesis build</span>
+    <span class="card-tag">--genesis</span>
+  </div>
+<pre><code><span class="kw">/INIT_KERNEL</span> <span class="flag">--genesis</span>
+<span class="label">topic:</span> <span class="str">startup operational framework</span>
+---
+<span class="label">#PROMPT</span>
+<span class="str">Build a complete operational framework for a 12-person SaaS
+startup scaling to 50 people over 18 months. Include: org
+structure, compensation philosophy, equity model, decision
+protocols, and how to avoid the cultural drift that typically
+happens at this growth stage.
+
+@Isaac @Silas @Dmitri @Bane</span></code></pre>
+  <div class="card-explanation">--genesis: full system build. All four @tags because all four domains are genuinely required — Isaac (equity/compensation math), Silas (legal/IP layer), Dmitri (org psychology and labor economics), Bane (culture and narrative). No flag arguments needed; routing assigns them and @tags confirm the weighting.</div>
+</div>
+
+<h3 id="ex-philosophy">Philosophy & Ethics</h3>
+
+<div class="example-card">
+  <div class="card-header">
+    <span class="card-label">Example 5.1 — Forced dialectic with synthesis anchor</span>
+    <span class="card-tag multi">--hegelian [A1, A2, A3]</span>
+  </div>
+<pre><code><span class="kw">/INIT_KERNEL</span> <span class="flag">--hegelian</span> <span class="farg">[Ludwig, Onesimus, Aristotle]</span>
+<span class="label">topic:</span> <span class="str">philosophy of personal identity</span>
+---
+<span class="label">#PROMPT</span>
+<span class="str">Is personal identity grounded in continuity of consciousness,
+continuity of body, or continuity of narrative?
+
+The strongest version of each argument. And a genuine synthesis
+— not "it depends" as a dodge, but an actual defensible position.
+
+@Spinoza</span></code></pre>
+  <div class="card-explanation">--hegelian [Ludwig, Onesimus, Aristotle]: Ludwig runs the semantic thesis (what does "continuity" actually mean?), Onesimus runs the metaphysical antithesis (what grounds identity at the level of substance and first cause?), Aristotle anchors the synthesis from an ethical and teleological standpoint. @Spinoza adds structural/taxonomic weight so the synthesis has clean categorical form — without giving Spinoza a protocol role that could muddy the dialectic.</div>
+</div>
+
+<!-- Multi-flag section -->
+<h3 id="ex-multiflags">Multi-Flag Examples</h3>
+
+<div class="example-card">
+  <div class="card-header">
+    <span class="card-label">Example 6.1 — Orthogonal + hegelian running in parallel</span>
+    <span class="card-tag multi">--orthogonal · --hegelian</span>
+  </div>
+<pre><code><span class="kw">/INIT_KERNEL</span> <span class="flag">--orthogonal</span> <span class="farg">[Pascal, Mather]</span> <span class="flag">--hegelian</span> <span class="farg">[Serge, Cael, Silas]</span>
+<span class="label">topic:</span> <span class="str">open-source SaaS architecture</span>
+---
+<span class="label">#PROMPT</span>
+<span class="str">Design the architecture for an open-source SaaS platform
+that must be self-hostable AND commercially licensable
+simultaneously. The API must be free and open; the managed
+hosting layer must generate revenue. Resolve the inherent
+AGPL tension without making the product hostile to enterprise
+procurement.
+
+@Isaac</span></code></pre>
+  <div class="card-explanation">Two protocols running simultaneously. --orthogonal [Pascal, Mather]: the backend API design must satisfy Mather's Logical_Soundness constraint — the open/closed boundary must be formally defined, not fuzzy. --hegelian [Serge, Cael, Silas]: Serge (architecture thesis: maximum openness) runs against Cael (antithesis: the managed layer needs differentiation to sell), Silas anchors the synthesis on AGPL compliance. @Isaac adds ROI analysis to ensure the synthesis is commercially viable. A multi-domain problem that would trip up a single-agent answer.</div>
+</div>
+
+<div class="example-card">
+  <div class="card-header">
+    <span class="card-label">Example 6.2 — Genesis + harmonic + orthogonal</span>
+    <span class="card-tag multi">--genesis · --harmonic · --orthogonal</span>
+  </div>
+<pre><code><span class="kw">/INIT_KERNEL</span> <span class="flag">--genesis</span> <span class="flag">--harmonic</span> <span class="farg">[Omnia, Bane, Cael]</span> <span class="flag">--orthogonal</span> <span class="farg">[Cael, Silas]</span>
+<span class="label">topic:</span> <span class="str">consumer wellness app design</span>
+---
+<span class="label">#PROMPT</span>
+<span class="str">Design a complete consumer wellness app — visual identity,
+UX architecture, and onboarding flow. The app collects
+sensitive health data. The design must be warm and inviting
+without obscuring or downplaying what users are agreeing to.
+
+@Isaac @Dmitri</span></code></pre>
+  <div class="card-explanation">--genesis: full build from zero. --harmonic [Omnia, Bane, Cael]: the design voice fuses aesthetics (Omnia), emotional trust (Bane), and technical UX (Cael) into a single unified output. --orthogonal [Cael, Silas]: simultaneously, Cael's UX decisions must satisfy Silas's License_Sovereignty constraint — every consent touchpoint must be legally defensible. Cael appears in both a harmonic and an orthogonal role; Amos resolves this by letting Cael fuse harmonically for the overall design language while running Silas's constraint as a hard gate specifically on the consent UX. @Isaac and @Dmitri add financial and organizational weight without protocol assignments.</div>
+</div>
+
+<div class="example-card">
+  <div class="card-header">
+    <span class="card-label">Example 6.3 — Full three-flag chain</span>
+    <span class="card-tag multi">--genesis · --hegelian · --orthogonal</span>
+  </div>
+<pre><code><span class="kw">/INIT_KERNEL</span> <span class="flag">--genesis</span> <span class="flag">--hegelian</span> <span class="farg">[Isaac, Aristotle, Silas]</span> <span class="flag">--orthogonal</span> <span class="farg">[Bane, Mather]</span>
+<span class="label">topic:</span> <span class="str">corporate ethics framework</span>
+---
+<span class="label">#PROMPT</span>
+<span class="str">Build a complete corporate ethics framework for a company
+that monetizes user data. It must satisfy shareholders,
+comply with GDPR, and be something employees actually
+believe rather than performatively post on a wall.
+
+@Dmitri @Ludwig</span></code></pre>
+  <div class="card-explanation">--genesis: build from zero. --hegelian [Isaac, Aristotle, Silas]: Isaac (fiduciary profit maximization) as thesis runs against Aristotle (ethical teleology — what is the company actually for?) as antithesis, Silas anchors the synthesis on legal compliance. --orthogonal [Bane, Mather]: Bane's narrative and persuasion work (making employees believe it) must satisfy Mather's Logical_Soundness constraint — the framework's internal logic must hold under scrutiny, not just read well. @Dmitri adds labor/org psychology weight. @Ludwig adds semantic precision — every term in the framework must mean exactly what it says. This is a genuinely hard real-world problem; the three-flag structure directly mirrors its actual complexity.</div>
+</div>
+
+<!-- 15 TROUBLESHOOTING -->
+<span class="section-num">15</span>
+<h2 id="troubleshooting">Troubleshooting</h2>
+
+<h4>The engine produced a generic, unsatisfying answer</h4>
+<p>Your prompt was underspecified. The alignment scoring works best when your prompt contains domain-specific language and clear stakes. Add: (1) explicit constraints, (2) a statement of what a bad answer would look like, (3) the purpose this output will be used for.</p>
+
+<h4>The output felt like it came from one agent when I wanted multiple</h4>
+<p>One agent dominated the Hard Merge threshold. Add <code>@</code> tags for the perspectives you want weighted, or use an explicit flag to assign agents to a protocol. Without tags or flags, the highest-scoring agent can fast-track and crowd out others.</p>
+
+<h4>Hot Mode paused when I just wanted an answer</h4>
+<p>Respond "proceed" to continue, or use <code>--strict</code> on the next run to force Cold Path and suppress the pause entirely. If Hot Mode keeps triggering, your prompt likely contains genuine tension worth surfacing — consider whether suppressing it is the right move.</p>
+
+<h4>The engine flagged a contradiction I didn't intend</h4>
+<p>The Z₂ involution check found a logical incompatibility. Read the flag carefully — it often reveals an assumption you didn't know you were making. Resolve the contradiction in the prompt, or use <code>--harmonic</code> without arguments to push past it and see what synthesis the engine can reach.</p>
+
+<h4>My flag agent arguments don't seem to be taking effect</h4>
+<p>Agent names in flag arguments are case-sensitive and must match the roster exactly. Check spelling. Also verify the agents you specified suit the protocol — running <code>--hegelian</code> with two agents from strongly overlapping domains will produce a weak dialectic. Choose agents from genuinely different spaces.</p>
+
+<h4>I want to combine --orthogonal and --hegelian on the same agent</h4>
+<p>This is valid. When an agent appears in both a harmonic/orthogonal role and a dialectic role, Amos resolves priority: the dialectic role governs the agent's primary output, and the orthogonal constraint is applied as a gate on that output before it enters the synthesis stream.</p>
+
+<!-- 16 CHEAT SHEET -->
+<span class="section-num">16</span>
+<h2 id="cheatsheet">Quick Cheat Sheet</h2>
+
+<pre><code><span class="comment">// ─── TEMPLATES ────────────────────────────────────────────────────────</span>
+
+<span class="comment">// Minimum viable prompt</span>
+<span class="kw">/INIT_KERNEL</span>
+<span class="label">topic:</span> <span class="str">your domain</span>
+---
+<span class="label">#PROMPT</span>
+<span class="str">Your question.</span> <span class="agent">@AgentA @AgentB</span>
+
+<span class="comment">// Fast + scoped — no synthesis overhead</span>
+<span class="kw">/INIT_KERNEL</span> <span class="flag">--strict</span>
+<span class="label">topic:</span> <span class="str">your domain</span>
+---
+<span class="label">#PROMPT</span>
+<span class="str">Your question.</span> <span class="agent">@Agent</span>
+
+<span class="comment">// Full build from zero</span>
+<span class="kw">/INIT_KERNEL</span> <span class="flag">--genesis</span>
+<span class="label">topic:</span> <span class="str">your domain</span>
+---
+<span class="label">#PROMPT</span>
+<span class="str">Build [X] from zero.</span> <span class="agent">@AgentA @AgentB</span>
+
+<span class="comment">// Forced dialectic — A1 vs A2, A3 anchors synthesis</span>
+<span class="kw">/INIT_KERNEL</span> <span class="flag">--hegelian</span> <span class="farg">[A1, A2, A3]</span>
+<span class="label">topic:</span> <span class="str">your domain</span>
+---
+<span class="label">#PROMPT</span>
+<span class="str">The tension between [X] and [Y]. Synthesize.</span>
+
+<span class="comment">// Forced resonance fusion — A1 + A2 blend, A3 stabilizes</span>
+<span class="kw">/INIT_KERNEL</span> <span class="flag">--harmonic</span> <span class="farg">[A1, A2, A3]</span>
+<span class="label">topic:</span> <span class="str">your domain</span>
+---
+<span class="label">#PROMPT</span>
+<span class="str">Your question requiring blended perspectives.</span>
+
+<span class="comment">// Builder must satisfy Constrainer's hard rule</span>
+<span class="kw">/INIT_KERNEL</span> <span class="flag">--orthogonal</span> <span class="farg">[Builder, Constrainer]</span>
+<span class="label">topic:</span> <span class="str">your domain</span>
+---
+<span class="label">#PROMPT</span>
+<span class="str">Build [X].</span>
+
+<span class="comment">// Multi-flag chain</span>
+<span class="kw">/INIT_KERNEL</span> <span class="flag">--genesis</span> <span class="flag">--orthogonal</span> <span class="farg">[A1, A2]</span> <span class="flag">--hegelian</span> <span class="farg">[A3, A4, A5]</span>
+<span class="label">topic:</span> <span class="str">your domain</span>
+---
+<span class="label">#PROMPT</span>
+<span class="str">Complex cross-domain request.</span> <span class="agent">@AdditionalAgent</span>
+
+<span class="comment">// ─── FLAG SUMMARY ─────────────────────────────────────────────────────</span>
+<span class="flag">--strict</span>                              <span class="comment">// Cold path. Fast. No synthesis.</span>
+<span class="flag">--genesis</span>                             <span class="comment">// Full build from zero.</span>
+<span class="flag">--hegelian</span> <span class="farg">[A1, A2, (A3)]</span>            <span class="comment">// Dialectic. A3 anchors synthesis.</span>
+<span class="flag">--harmonic</span> <span class="farg">[A1, A2, (A3)]</span>            <span class="comment">// Resonance fusion. A3 stabilizes.</span>
+<span class="flag">--harmonic</span>                            <span class="comment">// No args: global synthesis override.</span>
+<span class="flag">--orthogonal</span> <span class="farg">[Builder, Constrainer]</span>   <span class="comment">// Builder output gated by Constrainer.</span>
+
+<span class="comment">// ─── AGENT QUICK REFERENCE ────────────────────────────────────────────</span>
+<span class="agent">@Cael</span>       <span class="comment">// React, UI, client-side state          C: DOM_Integrity</span>
+<span class="agent">@Pascal</span>     <span class="comment">// SQL, Node, APIs, pipelines             C: ACID_Compliance</span>
+<span class="agent">@Serge</span>      <span class="comment">// System architecture, scaling           C: Cross_Matrix_Sync</span>
+<span class="agent">@Bernini</span>    <span class="comment">// Structural design, mechanics           C: Structural_Load</span>
+<span class="agent">@Mather</span>     <span class="comment">// Math, proofs, topology                 C: Logical_Soundness</span>
+<span class="agent">@Ezekiel</span>    <span class="comment">// Signals, DSP, measurement              C: Signal_Fidelity</span>
+<span class="agent">@Galileo</span>    <span class="comment">// Physics, empirical science             C: Empirical_Observation</span>
+<span class="agent">@Omnia</span>      <span class="comment">// Typography, CSS, aesthetics            C: Visual_Hierarchy</span>
+<span class="agent">@Bane</span>       <span class="comment">// Narrative, psychology, PR              C: Ethical_Alignment</span>
+<span class="agent">@Silas</span>      <span class="comment">// IP law, licensing, revenue             C: License_Sovereignty</span>
+<span class="agent">@Dmitri</span>     <span class="comment">// Org psychology, labor economics        C: Objective_Metrics</span>
+<span class="agent">@Isaac</span>      <span class="comment">// Accounting, ROI, fiduciary             C: Resource_Balance</span>
+<span class="agent">@Ludwig</span>     <span class="comment">// Semantics, ontology, meaning           C: Definitional_Clarity</span>
+<span class="agent">@Aristotle</span>  <span class="comment">// Ethics, logic, teleology               C: Axiomatic_Purity</span>
+<span class="agent">@Spinoza</span>    <span class="comment">// Taxonomy, categories, structure        C: Structural_Necessity</span>
+<span class="agent">@Onesimus</span>   <span class="comment">// Metaphysics, first cause               C: Ontological_Truth</span>
+<span class="agent">@Margaret</span>   <span class="comment">// History, temporal precedent            C: Chronological_Accuracy</span></code></pre>
+
+<div class="callout good">
+  <strong>The single most effective habit</strong>
+  <p>Write your prompt until you know exactly what a <em>bad</em> answer would look like. Then add one sentence saying so. The engine uses negative constraints as powerfully as positive ones — ruling out wrong answers is half the work of finding the right one.</p>
+</div>
+
+<hr class="divider">
+<p style="color: var(--text-faint); font-size: 12px; padding-bottom: 3rem;">Agent Engine User Manual · Kernel v9.3.0-full-manifold · Updated with complete flag set, dual-syntax documentation, T0–T4 state machine, Harmonic Resonance trigger, and multi-flag examples.</p>
+
+</main>
+</div>
+</div>
+</body>
+</html>
