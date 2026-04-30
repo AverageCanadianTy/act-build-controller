@@ -1357,7 +1357,7 @@ if __name__ == "__main__":
         '    permissions:',
         '      contents: write',
         '    steps:',
-        '      - uses: actions/download-artifact@v4',
+                '      - uses: actions/download-artifact@v4',
         '        with:',
         '          merge-multiple: true',
         '          path: dist',
@@ -1367,7 +1367,8 @@ if __name__ == "__main__":
         '          tag_name: v${{ github.event.inputs.version }}',
         '          name: ${{ github.event.inputs.release_title }}',
         '          body: ${{ github.event.inputs.release_notes }}',
-        '          files: dist/*',
+        '          files: dist/**',
+        '          overwrite: true',
         '        env:',
         '          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}',
       ].join('\n')
