@@ -63,10 +63,10 @@ jobs:
           name: ${{ github.event.inputs.release_title }}
           body: ${{ github.event.inputs.release_notes }}
           files: |
-            dist/installers/*.exe
-            dist/installers/*.dmg
-            dist/installers/*.AppImage
-            dist/installers/*.deb
+            dist/*.exe
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.deb
           overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
